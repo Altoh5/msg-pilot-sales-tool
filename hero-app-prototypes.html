@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Industry Scenario Demos — Capabara Tool Chain Demos</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: { colors: {
+  si: { primary:'#e5933e', secondary:'#ed6522', dark:'#1F2225', grey:'#6d6e71', light:'#f7f7f7' },
+  jade: { 400:'#4ade80', 500:'#22c55e', 600:'#16a34a' }
+}}}}
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+:root {
+  --bg-deep: #f2f2f2;
+  --bg-card: #ffffff;
+  --bg-elevated: #f7f7f7;
+  --border-subtle: rgba(109,110,113,0.15);
+  --border-hover: rgba(229,147,62,0.4);
+  --text-primary: #1F2225;
+  --text-secondary: #4a4a4a;
+  --text-muted: #6d6e71;
+  --accent: #e5933e;
+  --accent-secondary: #ed6522;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+}
+* { box-sizing: border-box; }
+body { font-family: 'Open Sans', Arial, Calibri, sans-serif; background: var(--bg-deep); color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+h1,h2,h3 { font-family: Arial, sans-serif; font-weight: 700; }
+code, .mono { font-family: 'JetBrains Mono', monospace; }
+.glass { background: #ffffff; border-bottom: 1px solid var(--border-subtle); box-shadow: var(--shadow-sm); }
+.card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 16px; box-shadow: var(--shadow-md); }
+.chain-arrow { color: var(--accent); }
+.tool-node { border: 2px solid var(--border-subtle); background: #fff; transition: all 0.3s; }
+.tool-node.active { border-color: var(--accent); box-shadow: 0 0 16px rgba(229,147,62,0.2); background: rgba(229,147,62,0.04); }
+.tool-node.completed { border-color: #22c55e; background: rgba(34,197,94,0.04); }
+.chat-bubble-ai { background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 12px 12px 12px 4px; color: var(--text-primary); }
+.chat-bubble-user { background: rgba(229,147,62,0.08); border: 1px solid rgba(229,147,62,0.2); border-radius: 12px 12px 4px 12px; color: var(--text-primary); }
+.fade-in { animation: fadeIn 0.4s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.typing::after { content:'...'; animation: dots 1.5s infinite; }
+@keyframes dots { 0%{content:'.'} 33%{content:'..'} 66%{content:'...'} }
+.tab-btn { transition: all 0.2s; }
+.tab-btn.active { background: linear-gradient(135deg, #e5933e, #ed6522); color: white; }
+.output-table td { padding: 6px 10px; border-bottom: 1px solid var(--border-subtle); font-size: 0.8rem; color: var(--text-secondary); }
+.output-table th { padding: 6px 10px; border-bottom: 2px solid var(--accent); font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); text-align: left; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div id="app"></div>
+
+<script>
+const HERO_APPS = [
+  {
+    id: 'invoice',
+    industry: 'Manufacturing / Trading',
+    icon: '🏭',
+    name: 'Invoice Analyzer + PO Matcher',
+    tagline: 'From invoice chaos to instant reconciliation',
+    chain: [
+      { tool: 'Invoice Intake', icon: '📥', desc: 'Upload invoice (PDF, photo, scan). AI detects format and extracts metadata.', input: 'Raw invoice document', output: 'Structured invoice data (vendor, date, line items, totals)' },
+      { tool: 'Line Item Extractor', icon: '🔍', desc: 'Extract every line item with quantities, unit prices, tax, and totals.', input: 'Structured invoice data', output: 'Itemized table with calculations verified' },
+      { tool: 'PO Cross-Matcher', icon: '🔗', desc: 'Match extracted items against existing Purchase Orders. Flag discrepancies.', input: 'Line items + PO reference data', output: 'Match report with discrepancy flags' },
+      { tool: 'Reconciliation Report', icon: '📊', desc: 'Generate final report with approval status, exceptions, and recommended actions.', input: 'Match results + business rules', output: 'PDF report + action items' }
+    ],
+    sampleOutput: {
+      type: 'invoice_report',
+      vendor: 'ACE Building Materials Pte Ltd',
+      invoiceNo: 'INV-2026-0847',
+      date: '2026-03-15',
+      poRef: 'PO-2026-0312',
+      items: [
+        { desc: 'Portland Cement 50kg', qty: 200, unitPrice: 12.50, total: 2500.00, poQty: 200, poPrice: 12.50, status: '✅ Match' },
+        { desc: 'Steel Rebar 12mm', qty: 150, unitPrice: 8.75, total: 1312.50, poQty: 150, poPrice: 8.50, status: '⚠️ Price +$0.25' },
+        { desc: 'Sand Fine Grade', qty: 50, unitPrice: 45.00, total: 2250.00, poQty: 40, poPrice: 45.00, status: '❌ Qty mismatch +10' },
+        { desc: 'Waterproofing Membrane', qty: 30, unitPrice: 28.00, total: 840.00, poQty: 30, poPrice: 28.00, status: '✅ Match' }
+      ],
+      totalInvoice: 6902.50,
+      totalPO: 6640.00,
+      variance: 262.50,
+      recommendation: 'REVIEW REQUIRED — 2 discrepancies found. Steel rebar unit price exceeds PO by $0.25/unit ($37.50 total). Sand quantity exceeds PO by 10 units ($450.00). Total variance: $262.50. Recommend: Confirm delivery receipt for sand overage, request credit note for price discrepancy.'
+    }
+  },
+  {
+    id: 'contract',
+    industry: 'Professional Services',
+    icon: '⚖️',
+    name: 'Contract Risk Analyzer',
+    tagline: 'Catch risky clauses before they catch you',
+    chain: [
+      { tool: 'Contract Upload', icon: '📄', desc: 'Upload contract (PDF/Word). AI identifies contract type and parties.', input: 'Raw contract document', output: 'Contract metadata (type, parties, dates, jurisdiction)' },
+      { tool: 'Clause Extractor', icon: '🔍', desc: 'Extract and categorize all key clauses: liability, indemnity, termination, IP, etc.', input: 'Contract text', output: 'Categorized clause library with locations' },
+      { tool: 'Risk Scorer', icon: '⚠️', desc: 'Score each clause against risk benchmarks. Flag unusual or missing provisions.', input: 'Extracted clauses + risk rules', output: 'Risk scorecard with severity ratings' },
+      { tool: 'Risk Report Generator', icon: '📋', desc: 'Generate executive summary with recommended negotiation points.', input: 'Risk scores + clause analysis', output: 'Risk report + negotiation brief' }
+    ],
+    sampleOutput: {
+      type: 'contract_report',
+      contractType: 'Master Service Agreement',
+      parties: { party1: 'TechVentures Pte Ltd', party2: 'Global Consulting Corp' },
+      effectiveDate: '2026-04-01',
+      termLength: '24 months',
+      overallRisk: 'MEDIUM-HIGH',
+      riskScore: 72,
+      clauses: [
+        { clause: 'Limitation of Liability', risk: 'HIGH', score: 9, detail: 'No liability cap specified. Unlimited exposure risk.', action: 'Add liability cap at 12 months of fees paid' },
+        { clause: 'Indemnification', risk: 'HIGH', score: 8, detail: 'One-sided indemnity — only Party A indemnifies. Missing mutual protection.', action: 'Negotiate mutual indemnification clause' },
+        { clause: 'Intellectual Property', risk: 'MEDIUM', score: 6, detail: 'IP ownership transfers on payment. No pre-existing IP carve-out.', action: 'Add pre-existing IP exclusion clause' },
+        { clause: 'Termination', risk: 'LOW', score: 3, detail: '90-day notice period. Standard market terms.', action: 'Acceptable — no change needed' },
+        { clause: 'Data Protection', risk: 'MEDIUM', score: 5, detail: 'Generic PDPA reference. No specific DPO obligations.', action: 'Add specific PDPA compliance schedule' },
+        { clause: 'Non-Compete', risk: 'HIGH', score: 8, detail: '24-month non-compete, APAC-wide scope. Overly broad.', action: 'Narrow to 12 months, specific industry only' }
+      ],
+      missingClauses: ['Force Majeure', 'Dispute Resolution Mechanism', 'Audit Rights'],
+      recommendation: '3 HIGH-RISK clauses detected. Do NOT sign without addressing liability cap, mutual indemnification, and non-compete scope. 3 standard clauses are missing entirely. Estimated negotiation priority: Liability Cap > Indemnification > Non-Compete > Missing Clauses.'
+    }
+  },
+  {
+    id: 'claims',
+    industry: 'Healthcare',
+    icon: '🏥',
+    name: 'Insurance Claim Processor',
+    tagline: 'Process claims in seconds, not hours',
+    chain: [
+      { tool: 'Claim Intake', icon: '📋', desc: 'Upload claim form. AI extracts patient info, procedure codes, and diagnosis.', input: 'Insurance claim document', output: 'Structured claim data (patient, provider, codes)' },
+      { tool: 'Code Validator', icon: '✅', desc: 'Validate ICD-10, CPT codes against procedure descriptions. Flag mismatches.', input: 'Extracted codes + descriptions', output: 'Validation report with code accuracy' },
+      { tool: 'Coverage Checker', icon: '🔍', desc: 'Cross-reference against policy terms. Check pre-auth requirements.', input: 'Validated codes + policy rules', output: 'Coverage determination + exceptions' },
+      { tool: 'Submission Package', icon: '📦', desc: 'Generate clean submission package with supporting documentation checklist.', input: 'All validated data', output: 'Ready-to-submit claim package' }
+    ],
+    sampleOutput: {
+      type: 'claim_report',
+      claimId: 'CLM-2026-5521',
+      patient: 'John Tan Wei Ming',
+      provider: 'Mount Wellness Medical Centre',
+      insurer: 'AIA Singapore',
+      policyNo: 'HL-2025-889412',
+      procedures: [
+        { code: 'CPT-99213', desc: 'Office visit, established patient', amount: 150.00, status: '✅ Valid', coverage: 'Covered — $30 copay' },
+        { code: 'CPT-71046', desc: 'Chest X-ray, 2 views', amount: 280.00, status: '✅ Valid', coverage: 'Covered — 80% after deductible' },
+        { code: 'ICD-10 J18.9', desc: 'Pneumonia, unspecified', amount: null, status: '✅ Valid', coverage: 'Primary diagnosis confirmed' },
+        { code: 'CPT-94010', desc: 'Spirometry', amount: 120.00, status: '⚠️ Review', coverage: 'Pre-auth may be required' }
+      ],
+      totalClaim: 550.00,
+      estimatedCoverage: 412.00,
+      patientResponsibility: 138.00,
+      flags: ['Spirometry (CPT-94010) may require pre-authorization under Plan HL-Premier', 'Deductible status: $450 of $500 met YTD'],
+      recommendation: 'SUBMIT WITH NOTE — Claim is mostly clean. Flag spirometry for pre-auth check. Patient has met 90% of annual deductible. Estimated turnaround: 5-7 business days.'
+    }
+  },
+  {
+    id: 'recruiter',
+    industry: 'HR / Recruitment',
+    icon: '👥',
+    name: 'Smart Recruiter — Job → CV → Score',
+    tagline: 'Find the best candidates, not the most candidates',
+    chain: [
+      { tool: 'Job Brief Parser', icon: '📝', desc: 'Paste or upload job description. AI extracts must-have and nice-to-have criteria.', input: 'Job description text', output: 'Structured criteria matrix with weights' },
+      { tool: 'CV Batch Analyzer', icon: '📄', desc: 'Upload multiple CVs. Extract skills, experience, education for each candidate.', input: 'CV documents (batch)', output: 'Candidate profiles with extracted data' },
+      { tool: 'Match Scorer', icon: '🎯', desc: 'Score each candidate against job criteria. Rank by fit percentage.', input: 'Criteria matrix + candidate profiles', output: 'Ranked candidate list with scores' },
+      { tool: 'Shortlist Report', icon: '📊', desc: 'Generate shortlist with interview questions tailored to each candidate.', input: 'Ranked list + gap analysis', output: 'Shortlist report + interview guides' }
+    ],
+    sampleOutput: {
+      type: 'recruiter_report',
+      jobTitle: 'Senior Data Engineer',
+      company: 'FinTech Solutions Pte Ltd',
+      totalCVs: 47,
+      autoScreened: 47,
+      timeManual: '23.5 hours',
+      timeAI: '4 minutes',
+      shortlist: [
+        { rank: 1, name: 'Sarah Lim', score: 94, exp: '6 years', skills: 'Python, Spark, AWS, Airflow', education: 'NUS Computer Science', gap: 'No Kafka experience', interview: 'Ask about streaming data pipeline design' },
+        { rank: 2, name: 'Raj Patel', score: 89, exp: '8 years', skills: 'Python, Scala, GCP, Kafka', education: 'NTU Data Science', gap: 'AWS experience limited', interview: 'Explore AWS migration project readiness' },
+        { rank: 3, name: 'Wei Chen', score: 85, exp: '5 years', skills: 'Python, AWS, dbt, Snowflake', education: 'SMU Analytics', gap: 'No Spark, shorter experience', interview: 'Assess distributed computing knowledge' },
+        { rank: 4, name: 'Amanda Ng', score: 78, exp: '4 years', skills: 'Python, SQL, Azure, Tableau', education: 'SUTD', gap: 'More analytics than engineering focus', interview: 'Discuss transition from analytics to engineering' },
+        { rank: 5, name: 'David Ong', score: 72, exp: '7 years', skills: 'Java, Hadoop, On-prem', education: 'UniSIM IT', gap: 'Legacy stack, no cloud-native', interview: 'Explore willingness to retool to cloud' }
+      ],
+      recommendation: 'Top 3 candidates exceed 85% match threshold. Recommend interviewing Sarah Lim and Raj Patel first — both have core technical requirements. Wei Chen is strong backup. Consider Amanda Ng only if team needs analytics bridge.'
+    }
+  },
+  {
+    id: 'lease',
+    industry: 'Real Estate / Property',
+    icon: '🏠',
+    name: 'Lease Agreement Analyzer',
+    tagline: 'Every clause extracted, every risk flagged',
+    chain: [
+      { tool: 'Lease Upload', icon: '📄', desc: 'Upload lease agreement. AI identifies lease type, parties, and property details.', input: 'Lease document (PDF/scan)', output: 'Lease metadata (type, parties, property, dates)' },
+      { tool: 'Terms Extractor', icon: '🔍', desc: 'Extract all key terms: rent, escalation, maintenance, renewal, break clauses.', input: 'Lease text', output: 'Structured terms table' },
+      { tool: 'Clause Analyzer', icon: '⚠️', desc: 'Flag unusual clauses, hidden costs, and missing standard protections.', input: 'Extracted terms + market benchmarks', output: 'Clause analysis with market comparison' },
+      { tool: 'Tenant Summary', icon: '📊', desc: 'Generate plain-English summary for tenant/landlord with action items.', input: 'All analysis results', output: 'Executive summary + action items' }
+    ],
+    sampleOutput: {
+      type: 'lease_report',
+      property: '12 Marina Boulevard, #08-15, Marina Bay Financial Centre',
+      leaseType: 'Commercial Office Lease',
+      landlord: 'Mapletree Investments Pte Ltd',
+      tenant: 'Bright Analytics Pte Ltd',
+      term: '36 months (01 May 2026 — 30 Apr 2029)',
+      terms: [
+        { term: 'Base Rent', value: '$8,500/month ($12.50 psf)', market: '$11-14 psf', status: '✅ Within range' },
+        { term: 'Annual Escalation', value: '5% per annum', market: '2-3% typical', status: '⚠️ Above market' },
+        { term: 'Security Deposit', value: '3 months rent ($25,500)', market: '2-3 months', status: '✅ Standard' },
+        { term: 'Maintenance', value: 'Tenant responsible for ALL internal + HVAC', market: 'HVAC usually landlord', status: '❌ Unusual' },
+        { term: 'Renewal Option', value: 'None specified', market: 'Standard to include', status: '❌ Missing' },
+        { term: 'Break Clause', value: 'After 18 months, 6-month notice, 3-month penalty', market: '3-month notice, 2-month penalty', status: '⚠️ Heavy penalty' },
+        { term: 'Fit-Out', value: 'Tenant to reinstate to original condition on exit', market: 'Standard', status: '⚠️ Get cost estimate' }
+      ],
+      recommendation: 'NEGOTIATE BEFORE SIGNING. Key issues: (1) 5% annual escalation is significantly above market — push for 2-3% or CPI-linked. (2) HVAC maintenance should be landlord responsibility. (3) No renewal option — negotiate at least one 2-year renewal. (4) Break clause penalty is heavy — push for 2-month penalty. Estimated negotiation savings: $18,000-$25,000 over lease term.'
+    }
+  },
+  {
+    id: 'transcript',
+    industry: 'Education / Training',
+    icon: '🎓',
+    name: 'Transcript Evaluator & Credit Mapper',
+    tagline: 'Every grade extracted, every credit mapped',
+    chain: [
+      { tool: 'Transcript Upload', icon: '📄', desc: 'Upload academic transcripts (PDF/scan). AI identifies institution, student, and programme.', input: 'Transcript document (PDF/scan)', output: 'Student metadata (name, institution, programme, year)' },
+      { tool: 'Grade Extractor', icon: '🔍', desc: 'Extract all modules, grades, credits, and GPA. Handle different grading systems.', input: 'Transcript text', output: 'Structured module-grade-credit table' },
+      { tool: 'Requirement Matcher', icon: '⚖️', desc: 'Map extracted credits against target programme requirements. Identify gaps and exemptions.', input: 'Extracted grades + programme requirements', output: 'Credit mapping with gap analysis' },
+      { tool: 'Eligibility Report', icon: '📊', desc: 'Generate eligibility assessment with recommendations for admission or advanced standing.', input: 'All analysis results', output: 'Eligibility report + action items' }
+    ],
+    sampleOutput: {
+      type: 'transcript_report',
+      student: 'Rachel Tan Mei Ling',
+      institution: 'Singapore Polytechnic',
+      programme: 'Diploma in Business Information Technology',
+      graduationYear: '2024',
+      gpa: '3.52 / 4.00',
+      targetProgramme: 'BSc Information Systems — Singapore University of Social Sciences (SUSS)',
+      modules: [
+        { module: 'Database Management Systems', grade: 'A', credits: 4, mapping: 'IS201 Database Design', status: '✅ Exempted' },
+        { module: 'Business Analytics', grade: 'A-', credits: 4, mapping: 'IS205 Business Intelligence', status: '✅ Exempted' },
+        { module: 'Web Application Development', grade: 'B+', credits: 4, mapping: 'IS102 Web Development', status: '✅ Exempted' },
+        { module: 'Project Management', grade: 'B+', credits: 3, mapping: 'BUS301 Project Management', status: '✅ Exempted' },
+        { module: 'Systems Analysis & Design', grade: 'B', credits: 4, mapping: 'IS301 Systems Analysis', status: '✅ Exempted' },
+        { module: 'Cybersecurity Fundamentals', grade: 'B', credits: 3, mapping: 'IS310 Security Management', status: '⚠️ Partial match' },
+        { module: 'Data Structures & Algorithms', grade: 'C+', credits: 4, mapping: 'CS201 Algorithms', status: '❌ Below threshold (B required)' },
+        { module: 'Internship Project', grade: 'A', credits: 8, mapping: 'No equivalent', status: '⚠️ May count as elective' }
+      ],
+      summary: {
+        totalCredits: 34,
+        exemptedCredits: 19,
+        partialCredits: 3,
+        gapsIdentified: 2,
+        advancedStanding: 'Year 2 Semester 1'
+      },
+      recommendation: 'ELIGIBLE FOR ADVANCED STANDING. Student qualifies for exemption of 19 credits (5 modules) — can enter at Year 2 Sem 1, saving approximately 1 year. Key gaps: (1) Data Structures grade C+ is below B threshold — student must retake or sit for challenge exam. (2) Cybersecurity module only partially maps — recommend bridging module IS310B. Estimated time to degree: 2 years (vs 3 years standard). Estimated savings: ~$8,500 in tuition fees.'
+    }
+  },
+  {
+    id: 'vendor',
+    industry: 'General SME / Any Industry',
+    icon: '🏢',
+    name: 'Quote Comparison & Vendor Selection Engine',
+    tagline: 'Compare vendors in seconds, decide with confidence',
+    chain: [
+      { tool: 'Quote Upload', icon: '📥', desc: 'Upload multiple vendor quotes (PDF, email, scan). AI extracts pricing and terms.', input: 'Vendor quote documents (2-10)', output: 'Structured quote data per vendor' },
+      { tool: 'Pricing Normalizer', icon: '🔢', desc: 'Normalize all pricing to same basis (per unit, per month, total). Calculate true cost.', input: 'Raw quote data', output: 'Normalized comparison table' },
+      { tool: 'Terms Comparator', icon: '⚖️', desc: 'Compare payment terms, warranties, SLAs, delivery timelines side by side.', input: 'All vendor terms', output: 'Side-by-side comparison matrix' },
+      { tool: 'Recommendation Engine', icon: '🏆', desc: 'Score vendors on price, quality, terms, risk. Generate recommendation.', input: 'Normalized data + scoring weights', output: 'Vendor scorecard + recommendation' }
+    ],
+    sampleOutput: {
+      type: 'vendor_report',
+      requirement: 'Office IT Infrastructure Refresh — 50 Workstations + Server',
+      quotesReceived: 4,
+      vendors: [
+        { name: 'TechPro Solutions', totalPrice: 142500, pricePerUnit: 2850, delivery: '2 weeks', warranty: '3 years', payment: 'Net 30', sla: '4-hour response', score: 92, rank: 1 },
+        { name: 'Digital Systems SG', totalPrice: 135000, pricePerUnit: 2700, delivery: '3 weeks', warranty: '2 years', payment: 'Net 15', sla: 'Next business day', score: 85, rank: 2 },
+        { name: 'CompuMart Enterprise', totalPrice: 128000, pricePerUnit: 2560, delivery: '4 weeks', warranty: '1 year', payment: '50% upfront', sla: '48-hour response', score: 68, rank: 3 },
+        { name: 'AsiaPC Direct', totalPrice: 119500, pricePerUnit: 2390, delivery: '6 weeks', warranty: '1 year', payment: '100% upfront', sla: 'Email only', score: 45, rank: 4 }
+      ],
+      recommendation: 'RECOMMEND: TechPro Solutions. While not the cheapest ($14,500 more than lowest), TechPro offers best value: 3-year warranty (saves ~$15K in extended coverage), 4-hour SLA (critical for 50 users), and Net 30 payment. Digital Systems is strong backup if budget is tight. Avoid AsiaPC — lowest price but 100% upfront payment + minimal support creates unacceptable risk.'
+    }
+  }
+];
+
+let currentApp = 0;
+let chainStep = -1;
+let chatStep = 0;
+let showOutput = false;
+let isAnimating = false;
+
+function render() {
+  const app = HERO_APPS[currentApp];
+
+  document.getElementById('app').innerHTML = `
+  <!-- Header -->
+  <div class="glass sticky top-0 z-50 px-6 py-3">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div>
+        <div class="text-sm font-bold" style="color:var(--accent)">Industry Scenario Demos</div>
+        <div class="text-xs" style="color:var(--text-muted)">Capabara Tool Chain Demos for Sales Team</div>
+      </div>
+      <div class="flex gap-1 flex-wrap">
+        ${HERO_APPS.map((a, i) => `
+          <button onclick="selectApp(${i})" class="tab-btn px-3 py-1.5 rounded-lg text-xs font-medium ${currentApp === i ? 'active' : ''}" style="${currentApp !== i ? 'color:var(--text-muted);' : ''}">
+            ${a.icon} ${a.id === 'vendor' ? 'Vendor Compare' : a.id === 'recruiter' ? 'Recruiter' : a.id === 'transcript' ? 'Transcript' : a.name.split(' ')[0]}
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-6 py-6">
+    <!-- App Header -->
+    <div class="text-center mb-8 fade-in">
+      <div class="text-5xl mb-3">${app.icon}</div>
+      <h1 class="text-3xl mb-1" style="color:var(--text-primary)">${app.name}</h1>
+      <p style="color:var(--text-muted)">${app.tagline}</p>
+      <div class="text-xs mt-2" style="color:var(--accent)">${app.industry} • Capabara Tool Chain (4 steps)</div>
+    </div>
+
+    <!-- Tool Chain Diagram -->
+    <div class="card p-6 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg" style="font-weight:700;color:var(--text-primary)">Tool Chain Architecture</h2>
+        <button onclick="runDemo()" class="px-4 py-2 rounded-lg text-sm font-semibold text-white transition ${isAnimating ? 'opacity-50 cursor-not-allowed' : ''}" style="background:linear-gradient(135deg,#e5933e,#ed6522)">
+          ${isAnimating ? '⏳ Processing...' : '▶️ Run Demo'}
+        </button>
+      </div>
+
+      <div class="flex items-stretch gap-2 overflow-x-auto pb-2">
+        ${app.chain.map((step, i) => `
+          <div class="flex items-stretch gap-2 flex-1 min-w-0">
+            <div class="tool-node rounded-xl p-4 flex-1 min-w-[180px] ${chainStep > i ? 'completed' : chainStep === i ? 'active' : ''}" id="node-${i}">
+              <div class="text-2xl mb-2">${step.icon}</div>
+              <div class="text-sm font-bold mb-1" style="color:var(--text-primary)">${step.tool}</div>
+              <div class="text-xs mb-3" style="color:var(--text-muted)">${step.desc}</div>
+              <div class="text-xs">
+                <div class="mb-1" style="color:var(--text-muted)"><span style="color:var(--accent);font-weight:600">IN:</span> ${step.input}</div>
+                <div style="color:var(--text-muted)"><span style="color:#22c55e;font-weight:600">OUT:</span> ${step.output}</div>
+              </div>
+              ${chainStep === i ? '<div class="mt-2 text-xs" style="color:var(--accent)">Processing...</div>' : ''}
+              ${chainStep > i ? '<div class="mt-2 text-xs" style="color:#22c55e">✅ Complete</div>' : ''}
+            </div>
+            ${i < 3 ? '<div class="flex items-center chain-arrow text-2xl font-bold">→</div>' : ''}
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="mt-4 text-xs text-center" style="color:var(--text-muted)">
+        Built with Capabara Tool Chain — each tool passes context via <code class="mono" style="color:var(--accent)">{{next_tool}}</code> placeholder
+      </div>
+    </div>
+
+    <!-- Two Column: Chat Simulation + Sample Output -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Chat Simulation -->
+      <div class="card overflow-hidden">
+        <div class="px-4 py-3 flex items-center gap-2" style="background:var(--bg-elevated);border-bottom:1px solid var(--border-subtle)">
+          <div class="w-3 h-3 rounded-full ${isAnimating ? 'bg-yellow-500 animate-pulse' : chatStep > 0 ? 'bg-green-500' : ''}" style="${!isAnimating && chatStep === 0 ? 'background:var(--text-muted)' : ''}"></div>
+          <span class="text-sm font-semibold" style="color:var(--text-primary)">Capabara Chat — ${app.chain[Math.min(chainStep < 0 ? 0 : chainStep, 3)].tool}</span>
+        </div>
+        <div class="p-4 space-y-3 min-h-[400px] max-h-[500px] overflow-y-auto" id="chat-area">
+          ${chatStep === 0 && !showOutput
+            ? '<div class="flex items-center justify-center h-full text-sm py-20" style="color:var(--text-muted)">Click <strong style="color:var(--accent)" class="mx-1">▶️ Run Demo</strong> to see the Tool Chain in action</div>'
+            : renderChat(app)}
+        </div>
+      </div>
+
+      <!-- Sample Output -->
+      <div class="card overflow-hidden transition-all duration-500 ${showOutput ? 'opacity-100' : 'opacity-30'}">
+        <div class="px-4 py-3 flex items-center gap-2" style="background:var(--bg-elevated);border-bottom:1px solid var(--border-subtle)">
+          <div class="w-3 h-3 rounded-full" style="background:${showOutput ? 'var(--accent)' : 'var(--text-muted)'}"></div>
+          <span class="text-sm font-semibold" style="color:var(--text-primary)">${showOutput ? 'Sample Output — Final Report' : 'Output — Waiting for chain to complete...'}</span>
+        </div>
+        <div class="p-4 overflow-y-auto max-h-[600px]" id="output-area">
+          ${showOutput ? renderOutput(app) + `
+            <div class="mt-5 p-4 rounded-xl fade-in" style="background:linear-gradient(135deg, rgba(229,147,62,0.08), rgba(34,197,94,0.06)); border:1px solid rgba(229,147,62,0.25)">
+              <div class="text-sm font-bold mb-1" style="color:var(--text-primary)">Want to try this with YOUR document?</div>
+              <div class="text-xs mb-3" style="color:var(--text-muted)">Upload your own file and see the AI process it live</div>
+              <a href="https://app.capabara.ai" target="_blank" rel="noopener"
+                 style="display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:linear-gradient(135deg,#e5933e,#ed6522);color:white;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;box-shadow:0 2px 12px rgba(229,147,62,0.3);transition:all 0.2s"
+                 onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 20px rgba(229,147,62,0.4)'"
+                 onmouseout="this.style.transform='';this.style.boxShadow='0 2px 12px rgba(229,147,62,0.3)'">
+                Open in Capabara <span>&#8594;</span>
+              </a>
+            </div>
+          ` : '<div class="flex items-center justify-center py-20 text-sm" style="color:var(--text-muted)">' + (isAnimating ? '<span class="typing">Processing through Tool Chain</span>' : 'Report will appear here after the demo runs') + '</div>'}
+        </div>
+      </div>
+    </div>
+
+    <!-- Demo Script -->
+    <div class="card p-6 mt-6">
+      <h2 class="text-lg mb-4" style="font-weight:700;color:var(--text-primary)">🎬 Demo Script for Sales Team</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div class="text-sm font-semibold mb-2" style="color:var(--accent)">BEFORE the Demo</div>
+          <ul class="text-xs space-y-1" style="color:var(--text-secondary)">
+            <li>✅ Ask client for their worst-case document</li>
+            <li>✅ Have the Tool Chain pre-configured in Capabara</li>
+            <li>✅ Have the Problem Calculator ready with their numbers</li>
+            <li>✅ Know their current process (from discovery questions)</li>
+          </ul>
+        </div>
+        <div>
+          <div class="text-sm font-semibold mb-2" style="color:var(--accent)">DURING the Demo</div>
+          <ul class="text-xs space-y-1" style="color:var(--text-secondary)">
+            <li>1️⃣ "Let me show you what AI can do with YOUR document..."</li>
+            <li>2️⃣ Upload their document into Tool 1 (live)</li>
+            <li>3️⃣ Watch the chain process through all 4 steps (~30 seconds)</li>
+            <li>4️⃣ Show the final report: "Your team spends ${app.id === 'recruiter' ? '23 hours' : app.id === 'contract' ? '2 hours' : '12 hours'} on this. The AI did it in 30 seconds."</li>
+          </ul>
+        </div>
+        <div>
+          <div class="text-sm font-semibold mb-2" style="color:var(--accent)">THE CLOSE</div>
+          <ul class="text-xs space-y-1" style="color:var(--text-secondary)">
+            <li>💰 "The government covers 90% — your cost is $1,500"</li>
+            <li>🎯 "We have ${Math.floor(Math.random()*5)+3} pilot slots left this quarter"</li>
+            <li>📋 "Shall we start with the ${app.chain[0].tool} pilot?"</li>
+          </ul>
+        </div>
+        <div>
+          <div class="text-sm font-semibold mb-2" style="color:var(--accent)">IF THEY SAY NO</div>
+          <ul class="text-xs space-y-1" style="color:var(--text-secondary)">
+            <li>🤔 "What would need to be true for this to work for you?"</li>
+            <li>💡 Listen for: budget, timing, proof, approval</li>
+            <li>🔄 Restructure: smaller scope, future start, free trial</li>
+            <li>📊 52% of rejections convert with this technique</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+function renderChat(app) {
+  const allMessages = getChatMessages(app);
+  const visibleMessages = chatStep > 0 ? allMessages.slice(0, chatStep) : allMessages;
+  const isLastStep = chatStep >= allMessages.length;
+
+  let html = visibleMessages.map((msg, i) => {
+    const isNewest = (i === visibleMessages.length - 1) && !isLastStep && isAnimating;
+    const animClass = isNewest ? 'fade-in' : '';
+    if (msg.role === 'system') return `<div class="text-center text-xs py-2" style="color:var(--text-muted) ${animClass}">${msg.text}</div>`;
+    if (msg.role === 'user') return `<div class="flex justify-end ${animClass}"><div class="chat-bubble-user px-4 py-2 max-w-[85%] text-sm">${msg.text}</div></div>`;
+    return `<div class="flex justify-start ${animClass}"><div class="chat-bubble-ai px-4 py-2 max-w-[85%] text-sm">${msg.text}</div></div>`;
+  }).join('');
+
+  // Show typing indicator if still animating
+  if (isAnimating && !isLastStep) {
+    html += '<div class="flex justify-start fade-in"><div class="chat-bubble-ai px-4 py-2 text-sm typing" style="color:var(--text-muted)">Processing</div></div>';
+  }
+
+  return html;
+}
+
+function renderOutput(app) {
+  const o = app.sampleOutput;
+
+  if (o.type === 'invoice_report') {
+    return `
+      <div class="space-y-4 text-sm fade-in">
+        <div class="pb-3" style="border-bottom:1px solid var(--border-subtle)">
+          <div class="font-bold text-lg" style="color:var(--accent)">📊 Invoice Reconciliation Report</div>
+          <div class="text-xs mt-1" style="color:var(--text-muted)">Generated by Capabara Tool Chain • ${new Date().toLocaleDateString()}</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div><span style="color:var(--text-muted)">Vendor:</span> ${o.vendor}</div>
+          <div><span style="color:var(--text-muted)">Invoice #:</span> ${o.invoiceNo}</div>
+          <div><span style="color:var(--text-muted)">Date:</span> ${o.date}</div>
+          <div><span style="color:var(--text-muted)">PO Ref:</span> ${o.poRef}</div>
+        </div>
+        <table class="output-table w-full">
+          <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th><th>PO Match</th></tr>
+          ${o.items.map(i => `<tr><td>${i.desc}</td><td class="mono">${i.qty}</td><td class="mono">$${i.unitPrice.toFixed(2)}</td><td class="mono">$${i.total.toFixed(2)}</td><td>${i.status}</td></tr>`).join('')}
+        </table>
+        <div class="grid grid-cols-3 gap-3">
+          <div class="rounded p-3 text-center" style="background:var(--bg-elevated);border:1px solid var(--border-subtle)"><div class="text-xs" style="color:var(--text-muted)">Invoice Total</div><div class="font-bold">$${o.totalInvoice.toFixed(2)}</div></div>
+          <div class="rounded p-3 text-center" style="background:var(--bg-elevated);border:1px solid var(--border-subtle)"><div class="text-xs" style="color:var(--text-muted)">PO Total</div><div class="font-bold">$${o.totalPO.toFixed(2)}</div></div>
+          <div class="rounded p-3 text-center" style="background:rgba(220,38,38,0.05);border:1px solid rgba(220,38,38,0.2)"><div class="text-xs" style="color:var(--text-muted)">Variance</div><div class="font-bold " style="color:#dc2626">$${o.variance.toFixed(2)}</div></div>
+        </div>
+        <div class="rounded p-3 text-xs" style="background:rgba(229,147,62,0.06);border:1px solid rgba(229,147,62,0.2)">${o.recommendation}</div>
+      </div>`;
+  }
+
+  if (o.type === 'contract_report') {
+    return `
+      <div class="space-y-4 text-sm fade-in">
+        <div class="pb-3" style="border-bottom:1px solid var(--border-subtle)">
+          <div class="font-bold text-lg" style="color:var(--accent)">⚠️ Contract Risk Report</div>
+          <div class="text-xs mt-1" style="color:var(--text-muted)">Generated by Capabara Tool Chain</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div><span style="color:var(--text-muted)">Type:</span> ${o.contractType}</div>
+          <div><span style="color:var(--text-muted)">Risk:</span> <span class="" style="color:#dc2626 font-bold">${o.overallRisk} (${o.riskScore}/100)</span></div>
+          <div><span style="color:var(--text-muted)">Party A:</span> ${o.parties.party1}</div>
+          <div><span style="color:var(--text-muted)">Party B:</span> ${o.parties.party2}</div>
+        </div>
+        <div class="space-y-2">
+          ${o.clauses.map(c => `
+            <div class="rounded p-3" style="background:var(--bg-elevated);border:1px solid var(--border-subtle)">
+              <div class="flex justify-between items-center mb-1">
+                <span class="font-semibold text-xs">${c.clause}</span>
+                <span class="text-xs px-2 py-0.5 rounded ${c.risk === 'HIGH' ? 'bg-red-50 text-red-700' : c.risk === 'MEDIUM' ? 'bg-yellow-50 text-yellow-700' : 'bg-green-50 text-green-700'}">${c.risk} (${c.score}/10)</span>
+              </div>
+              <div class="text-xs" style="color:var(--text-muted)">${c.detail}</div>
+              <div class="text-xs mt-1" style="color:var(--accent)">→ ${c.action}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="rounded p-3 text-xs" style="background:rgba(220,38,38,0.05);border:1px solid rgba(220,38,38,0.2)">
+          <strong>Missing Clauses:</strong> ${o.missingClauses.join(', ')}
+        </div>
+        <div class="rounded p-3 text-xs" style="background:rgba(229,147,62,0.06);border:1px solid rgba(229,147,62,0.2)">${o.recommendation}</div>
+      </div>`;
+  }
+
+  if (o.type === 'claim_report') {
+    return `
+      <div class="space-y-4 text-sm fade-in">
+        <div class="pb-3" style="border-bottom:1px solid var(--border-subtle)">
+          <div class="font-bold text-lg" style="color:var(--accent)">📦 Insurance Claim Package</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div><span style="color:var(--text-muted)">Claim ID:</span> ${o.claimId}</div>
+          <div><span style="color:var(--text-muted)">Patient:</span> ${o.patient}</div>
+          <div><span style="color:var(--text-muted)">Provider:</span> ${o.provider}</div>
+          <div><span style="color:var(--text-muted)">Policy:</span> ${o.policyNo}</div>
+        </div>
+        <table class="output-table w-full">
+          <tr><th>Code</th><th>Description</th><th>Amount</th><th>Status</th><th>Coverage</th></tr>
+          ${o.procedures.map(p => `<tr><td class="mono">${p.code}</td><td>${p.desc}</td><td class="mono">${p.amount ? '$'+p.amount.toFixed(2) : '—'}</td><td>${p.status}</td><td class="text-xs">${p.coverage}</td></tr>`).join('')}
+        </table>
+        <div class="grid grid-cols-3 gap-3">
+          <div class="rounded p-3 text-center" style="background:var(--bg-elevated);border:1px solid var(--border-subtle)"><div class="text-xs" style="color:var(--text-muted)">Total Claim</div><div class="font-bold">$${o.totalClaim.toFixed(2)}</div></div>
+          <div class="rounded p-3 text-center" style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2)"><div class="text-xs" style="color:var(--text-muted)">Est. Coverage</div><div class="font-bold " style="color:#22c55e">$${o.estimatedCoverage.toFixed(2)}</div></div>
+          <div class="rounded p-3 text-center" style="background:var(--bg-elevated);border:1px solid var(--border-subtle)"><div class="text-xs" style="color:var(--text-muted)">Patient Pays</div><div class="font-bold">$${o.patientResponsibility.toFixed(2)}</div></div>
+        </div>
+        <div class="rounded p-3 text-xs" style="background:rgba(229,147,62,0.06);border:1px solid rgba(229,147,62,0.2)">
+          <strong>Flags:</strong><br>${o.flags.map(f => '⚠️ ' + f).join('<br>')}
+        </div>
+        <div class="rounded p-3 text-xs" style="background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.2)">${o.recommendation}</div>
+      </div>`;
+  }
+
+  if (o.type === 'recruiter_report') {
+    return `
+      <div class="space-y-4 text-sm fade-in">
+        <div class="pb-3" style="border-bottom:1px solid var(--border-subtle)">
+          <div class="font-bold text-lg" style="color:var(--accent)">📊 Candidate Shortlist Report</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div><span style="color:var(--text-muted)">Role:</span> ${o.jobTitle}</div>
+          <div><span style="color:var(--text-muted)">Company:</span> ${o.company}</div>
+          <div><span style="color:var(--text-muted)">CVs Screened:</span> ${o.totalCVs}</div>
+          <div><span style="color:var(--text-muted)">Time: </span><span class="line-through" style="color:var(--text-muted)">${o.timeManual}</span> → <span class="" style="color:#22c55e font-bold">${o.timeAI}</span></div>
+        </div>
+        <div class="space-y-2">
+          ${o.shortlist.map(c => `
+            <div class="rounded p-3" style="background:var(--bg-elevated);border:1px solid var(--border-subtle)">
+              <div class="flex justify-between items-center mb-1">
+                <span class="font-semibold">${c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : '#'+c.rank} ${c.name}</span>
+                <span class="text-xs px-2 py-0.5 rounded ${c.score >= 85 ? 'bg-green-50 text-green-700' : c.score >= 75 ? 'bg-yellow-50 text-yellow-700' : 'bg-gray-100 text-gray-500'}">${c.score}% match</span>
+              </div>
+              <div class="text-xs" style="color:var(--text-muted)">${c.exp} exp • ${c.education} • ${c.skills}</div>
+              <div class="text-xs mt-1"><span style="color:#d97706">Gap:</span> ${c.gap}</div>
+              <div class="text-xs"><span style="color:var(--accent)">Interview Q:</span> ${c.interview}</div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="rounded p-3 text-xs" style="background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.2)">${o.recommendation}</div>
+      </div>`;
+  }
+
+  if (o.type === 'lease_report') {
+    return `
+      <div class="space-y-4 text-sm fade-in">
+        <div class="pb-3" style="border-bottom:1px solid var(--border-subtle)">
+          <div class="font-bold text-lg" style="color:var(--accent)">🏠 Lease Analysis Report</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div><span style="color:var(--text-muted)">Property:</span> ${o.property}</div>
+          <div><span style="color:var(--text-muted)">Type:</span> ${o.leaseType}</div>
+          <div><span style="color:var(--text-muted)">Landlord:</span> ${o.landlord}</div>
+          <div><span style="color:var(--text-muted)">Term:</span> ${o.term}</div>
+        </div>
+        <table class="output-table w-full">
+          <tr><th>Term</th><th>Value</th><th>Market</th><th>Assessment</th></tr>
+          ${o.terms.map(t => `<tr><td>${t.term}</td><td>${t.value}</td><td class="text-xs" style="color:var(--text-muted)">${t.market}</td><td>${t.status}</td></tr>`).join('')}
+        </table>
+        <div class="rounded p-3 text-xs" style="background:rgba(229,147,62,0.06);border:1px solid rgba(229,147,62,0.2)">${o.recommendation}</div>
+      </div>`;
+  }
+
+  if (o.type === 'transcript_report') {
+    return `
+      <div class="space-y-4 text-sm fade-in">
+        <div class="pb-3" style="border-bottom:1px solid var(--border-subtle)">
+          <div class="font-bold text-lg" style="color:var(--accent)">🎓 Transcript Evaluation Report</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div><span style="color:var(--text-muted)">Student:</span> ${o.student}</div>
+          <div><span style="color:var(--text-muted)">Institution:</span> ${o.institution}</div>
+          <div><span style="color:var(--text-muted)">Programme:</span> ${o.programme}</div>
+          <div><span style="color:var(--text-muted)">GPA:</span> ${o.gpa}</div>
+          <div class="col-span-2"><span style="color:var(--text-muted)">Target:</span> ${o.targetProgramme}</div>
+        </div>
+        <table class="output-table w-full">
+          <tr><th>Module</th><th>Grade</th><th>Credits</th><th>Maps To</th><th>Status</th></tr>
+          ${o.modules.map(m => `<tr><td>${m.module}</td><td class="text-center">${m.grade}</td><td class="text-center">${m.credits}</td><td class="text-xs" style="color:var(--text-muted)">${m.mapping}</td><td>${m.status}</td></tr>`).join('')}
+        </table>
+        <div class="grid grid-cols-4 gap-2 text-center text-xs">
+          <div class="rounded p-2" style="background:var(--bg-elevated);border:1px solid var(--border-subtle)"><div style="color:var(--text-muted)">Total Credits</div><div class="font-bold text-lg" style="color:var(--text-primary)">${o.summary.totalCredits}</div></div>
+          <div class="rounded p-2" style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2)"><div style="color:var(--text-muted)">Exempted</div><div class="font-bold text-lg" style="color:#16a34a">${o.summary.exemptedCredits}</div></div>
+          <div class="rounded p-2" style="background:rgba(229,147,62,0.06);border:1px solid rgba(229,147,62,0.2)"><div style="color:var(--text-muted)">Partial</div><div class="font-bold text-lg" style="color:#d97706">${o.summary.partialCredits}</div></div>
+          <div class="rounded p-2" style="background:rgba(220,38,38,0.05);border:1px solid rgba(220,38,38,0.2)"><div style="color:var(--text-muted)">Gaps</div><div class="font-bold text-lg" style="color:#dc2626">${o.summary.gapsIdentified}</div></div>
+        </div>
+        <div class="bg-green-900/20 border border-green-700/30 rounded p-3 text-xs">${o.recommendation}</div>
+      </div>`;
+  }
+
+  if (o.type === 'vendor_report') {
+    return `
+      <div class="space-y-4 text-sm fade-in">
+        <div class="pb-3" style="border-bottom:1px solid var(--border-subtle)">
+          <div class="font-bold text-lg" style="color:var(--accent)">🏆 Vendor Comparison Report</div>
+          <div class="text-xs" style="color:var(--text-muted) mt-1">${o.requirement}</div>
+        </div>
+        <div class="space-y-2">
+          ${o.vendors.map(v => `
+            <div class="rounded p-3" style="background:var(--bg-elevated);border:1px solid var(--border-subtle) ${v.rank === 1 ? 'border" style="border-color:var(--accent)' : ''}">
+              <div class="flex justify-between items-center mb-1">
+                <span class="font-semibold">${v.rank === 1 ? '🏆 ' : '#'+v.rank+' '}${v.name}</span>
+                <span class="text-xs px-2 py-0.5 rounded ${v.score >= 85 ? 'bg-green-50 text-green-700' : v.score >= 65 ? 'bg-yellow-50 text-yellow-700' : 'bg-red-50 text-red-700'}">${v.score}/100</span>
+              </div>
+              <div class="grid grid-cols-5 gap-2 text-xs mt-2" style="color:var(--text-muted)">
+                <div><span style="color:var(--text-muted);font-weight:600">Total:</span><br><span class="mono" style="color:var(--text-primary)">\$${v.totalPrice.toLocaleString()}</span></div>
+                <div><span style="color:var(--text-muted);font-weight:600">Delivery:</span><br>${v.delivery}</div>
+                <div><span style="color:var(--text-muted);font-weight:600">Warranty:</span><br>${v.warranty}</div>
+                <div><span style="color:var(--text-muted);font-weight:600">Payment:</span><br>${v.payment}</div>
+                <div><span style="color:var(--text-muted);font-weight:600">SLA:</span><br>${v.sla}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="rounded p-3 text-xs" style="background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.2)">${o.recommendation}</div>
+      </div>`;
+  }
+
+  return '<div class="text-center py-10" style="color:var(--text-muted)">Select an industry scenario to view sample output</div>';
+}
+
+function selectApp(i) {
+  currentApp = i;
+  chainStep = -1;
+  chatStep = 0;
+  showOutput = false;
+  isAnimating = false;
+  render();
+}
+
+function runDemo() {
+  if (isAnimating) return;
+  isAnimating = true;
+  chainStep = 0;
+  chatStep = 0;
+  showOutput = false;
+  render();
+
+  const app = HERO_APPS[currentApp];
+  const chats = getChatMessages(app);
+  const totalMessages = chats.length;
+  let msgIndex = 0;
+  let toolStep = 0;
+
+  const interval = setInterval(() => {
+    msgIndex++;
+    chatStep = msgIndex;
+
+    // Advance tool chain node based on chat progress
+    // Map chat messages to tool chain steps (roughly: every few messages = next tool)
+    const progressRatio = msgIndex / totalMessages;
+    const newToolStep = Math.min(Math.floor(progressRatio * 4), 3);
+    if (newToolStep > toolStep) {
+      toolStep = newToolStep;
+      chainStep = toolStep;
+    }
+
+    if (msgIndex >= totalMessages) {
+      chainStep = 4; // all complete
+      showOutput = true;
+      isAnimating = false;
+      clearInterval(interval);
+    }
+    render();
+
+    // Scroll chat to bottom
+    const chatArea = document.getElementById('chat-area');
+    if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+  }, 1200);
+}
+
+function getChatMessages(app) {
+  const chats = {
+    invoice: [
+      { role: 'system', text: '🤖 Welcome to Invoice Analyzer + PO Matcher. Upload an invoice to begin.' },
+      { role: 'user', text: '📎 Uploaded: ACE-Building-Materials-INV-0847.pdf' },
+      { role: 'ai', text: '✅ Invoice detected: <strong>ACE Building Materials Pte Ltd</strong><br>Invoice #: INV-2026-0847<br>Date: 15 Mar 2026<br>Total: $6,902.50<br><br>Found 4 line items. Extracting details...<br><br><em>→ Passing to Line Item Extractor...</em>' },
+      { role: 'ai', text: '📋 <strong>Line Items Extracted:</strong><br>1. Portland Cement 50kg × 200 = $2,500.00<br>2. Steel Rebar 12mm × 150 = $1,312.50<br>3. Sand Fine Grade × 50 = $2,250.00<br>4. Waterproofing Membrane × 30 = $840.00<br><br>PO Reference found: PO-2026-0312<br><em>→ Passing to PO Cross-Matcher...</em>' },
+      { role: 'ai', text: '🔗 <strong>PO Match Results:</strong><br>✅ 2 items: Perfect match<br>⚠️ 1 item: Price discrepancy (Steel Rebar +$0.25/unit)<br>❌ 1 item: Quantity mismatch (Sand +10 units)<br><br>Total variance: <strong>$262.50</strong><br><em>→ Generating Reconciliation Report...</em>' },
+      { role: 'ai', text: '📊 <strong>RECONCILIATION REPORT READY</strong><br><br>Status: ⚠️ REVIEW REQUIRED<br>2 discrepancies totaling $262.50<br><br>Recommended actions:<br>1. Confirm delivery receipt for sand overage<br>2. Request credit note for steel price discrepancy<br><br><em>Processing time: 28 seconds</em><br><em>Manual equivalent: ~45 minutes</em>' }
+    ],
+    contract: [
+      { role: 'system', text: '🤖 Welcome to Contract Risk Analyzer. Upload a contract to begin.' },
+      { role: 'user', text: '📎 Uploaded: TechVentures-MSA-Draft-v3.pdf' },
+      { role: 'ai', text: '✅ Contract detected: <strong>Master Service Agreement</strong><br>Parties: TechVentures Pte Ltd ↔ Global Consulting Corp<br>Term: 24 months from 01 Apr 2026<br><br>Scanning 47 pages for key clauses...<br><em>→ Passing to Clause Extractor...</em>' },
+      { role: 'ai', text: '📋 <strong>18 Key Clauses Extracted:</strong><br>🔴 3 HIGH RISK: Liability (no cap), Indemnification (one-sided), Non-Compete (24mo APAC)<br>🟡 2 MEDIUM: IP ownership, Data Protection<br>🟢 1 LOW: Termination<br>❌ 3 MISSING: Force Majeure, Dispute Resolution, Audit Rights<br><br><em>→ Passing to Risk Scorer...</em>' },
+      { role: 'ai', text: '⚠️ <strong>OVERALL RISK: MEDIUM-HIGH (72/100)</strong><br><br>DO NOT SIGN without addressing:<br>1. Add liability cap at 12 months fees<br>2. Negotiate mutual indemnification<br>3. Narrow non-compete to 12mo, specific industry<br>4. Add missing Force Majeure clause<br><br><em>Full report generated. Processing time: 34 seconds.</em>' }
+    ],
+    claims: [
+      { role: 'system', text: '🤖 Welcome to Insurance Claim Processor. Upload a claim form to begin.' },
+      { role: 'user', text: '📎 Uploaded: AIA-Claim-Form-JohnTan-2026.pdf' },
+      { role: 'ai', text: '✅ Claim detected: <strong>AIA Singapore — Medical Claim</strong><br>Patient: John Tan Wei Ming<br>Provider: Mount Wellness Medical Centre<br>Policy: HL-2025-889412<br><br>Extracting procedure codes...<br><em>→ Passing to Code Validator...</em>' },
+      { role: 'ai', text: '📋 <strong>4 Procedures Found:</strong><br>✅ CPT-99213: Office visit — Valid<br>✅ CPT-71046: Chest X-ray — Valid<br>✅ ICD-10 J18.9: Pneumonia dx — Valid<br>⚠️ CPT-94010: Spirometry — Pre-auth may be required<br><br>Total claim: $550.00<br><em>→ Checking coverage...</em>' },
+      { role: 'ai', text: '📦 <strong>CLAIM PACKAGE READY</strong><br><br>Total: $550.00 | Est. coverage: $412.00 | Patient pays: $138.00<br>⚠️ Flag spirometry for pre-auth check<br>📊 Deductible: $450/$500 met YTD<br><br><em>Processing time: 22 seconds. Manual equivalent: ~35 minutes.</em>' }
+    ],
+    recruiter: [
+      { role: 'system', text: '🤖 Welcome to Smart Recruiter. Paste a job description or upload to begin.' },
+      { role: 'user', text: 'Hiring: Senior Data Engineer at FinTech Solutions. Must have Python, cloud (AWS preferred), 5+ years, data pipeline experience. Nice to have: Spark, Kafka, Airflow.' },
+      { role: 'ai', text: '✅ <strong>Job Brief Parsed:</strong><br>Role: Senior Data Engineer<br>Must-Have: Python, Cloud/AWS, 5+ yrs, pipeline exp<br>Nice-to-Have: Spark, Kafka, Airflow<br><br>Ready for CVs. Upload a batch to begin scoring.<br><em>→ Upload CVs to continue...</em>' },
+      { role: 'user', text: '📎 Uploaded: 47 CVs (batch upload)' },
+      { role: 'ai', text: '📊 <strong>47 CVs ANALYZED IN 4 MINUTES</strong><br><br>🥇 Sarah Lim — 94% match (6yr, Python/Spark/AWS/Airflow)<br>🥈 Raj Patel — 89% match (8yr, Python/Scala/GCP/Kafka)<br>🥉 Wei Chen — 85% match (5yr, Python/AWS/dbt/Snowflake)<br>4. Amanda Ng — 78% | 5. David Ong — 72%<br><br>Interview questions generated for top 5.<br><em>Manual screening time: 23.5 hours → AI: 4 minutes</em>' }
+    ],
+    lease: [
+      { role: 'system', text: '🤖 Welcome to Lease Agreement Analyzer. Upload a lease to begin.' },
+      { role: 'user', text: '📎 Uploaded: MBFC-Office-Lease-BrightAnalytics.pdf' },
+      { role: 'ai', text: '✅ <strong>Commercial Office Lease</strong><br>Property: 12 Marina Blvd, #08-15, MBFC<br>Landlord: Mapletree Investments<br>Term: 36 months (May 2026 — Apr 2029)<br>Base rent: $8,500/mo ($12.50 psf)<br><br><em>→ Extracting all terms...</em>' },
+      { role: 'ai', text: '⚠️ <strong>NEGOTIATE BEFORE SIGNING</strong><br><br>🔴 5% annual escalation (market: 2-3%)<br>🔴 Tenant responsible for HVAC (unusual)<br>🔴 No renewal option (should have)<br>🟡 Break clause penalty heavy (3mo vs 2mo market)<br><br>Est. savings from negotiation: <strong>$18,000-$25,000</strong><br><em>Full analysis in 31 seconds. Manual review: ~2 hours.</em>' }
+    ],
+    transcript: [
+      { role: 'system', text: '🤖 Welcome to Transcript Evaluator & Credit Mapper. Upload an academic transcript to begin.' },
+      { role: 'user', text: '📎 Uploaded: Singapore-Poly-Transcript-RachelTan.pdf' },
+      { role: 'ai', text: '✅ Transcript detected: <strong>Singapore Polytechnic</strong><br>Student: Rachel Tan Mei Ling<br>Programme: Diploma in Business Information Technology<br>Graduation: 2024 | GPA: 3.52/4.00<br><br>Found 8 modules with grades. Extracting details...<br><em>→ Passing to Grade Extractor...</em>' },
+      { role: 'ai', text: '📋 <strong>8 Modules Extracted:</strong><br>A: Database Mgmt, Internship | A-: Business Analytics<br>B+: Web Dev, Project Mgmt | B: Systems Analysis, Cybersecurity<br>C+: Data Structures & Algorithms<br><br>Total credits: 34 | Weighted GPA: 3.52<br><em>→ Mapping against SUSS BSc Information Systems requirements...</em>' },
+      { role: 'ai', text: '⚖️ <strong>Credit Mapping Results:</strong><br>✅ 5 modules exempted (19 credits)<br>⚠️ 1 partial match: Cybersecurity → IS310 (bridging needed)<br>❌ 1 below threshold: Data Structures C+ (B required)<br>⚠️ 1 no equivalent: Internship (may count as elective)<br><br><em>→ Generating Eligibility Report...</em>' },
+      { role: 'ai', text: '🎓 <strong>ELIGIBILITY REPORT READY</strong><br><br>Status: ✅ ELIGIBLE FOR ADVANCED STANDING<br>Entry point: Year 2 Semester 1 (saves 1 year)<br>Estimated savings: <strong>~$8,500 in tuition</strong><br><br>Action items:<br>1. Retake or challenge exam for Data Structures<br>2. Complete IS310B bridging module for Cybersecurity<br><br><em>Processing time: 19 seconds. Manual evaluation: ~2 hours.</em>' }
+    ],
+    vendor: [
+      { role: 'system', text: '🤖 Welcome to Quote Comparison Engine. Upload vendor quotes to begin.' },
+      { role: 'user', text: '📎 Uploaded: 4 vendor quotes for IT infrastructure refresh (50 workstations + server)' },
+      { role: 'ai', text: '✅ <strong>4 Quotes Extracted:</strong><br>1. TechPro Solutions: $142,500<br>2. Digital Systems SG: $135,000<br>3. CompuMart Enterprise: $128,000<br>4. AsiaPC Direct: $119,500<br><br>Normalizing pricing and comparing terms...<br><em>→ Passing to Pricing Normalizer...</em>' },
+      { role: 'ai', text: '📊 <strong>NORMALIZED COMPARISON:</strong><br>Per-unit: $2,390 — $2,850<br>Warranty: 1-3 years | SLA: Email only — 4hr response<br>Payment: 100% upfront — Net 30<br><br><em>→ Scoring vendors...</em>' },
+      { role: 'ai', text: '🏆 <strong>RECOMMENDATION: TechPro Solutions (Score: 92/100)</strong><br><br>$14,500 more than cheapest BUT:<br>✅ 3yr warranty (saves ~$15K in coverage)<br>✅ 4hr SLA (critical for 50 users)<br>✅ Net 30 payment (cash flow friendly)<br><br>⚠️ Avoid AsiaPC: 100% upfront + email-only support<br><em>Analysis time: 18 seconds vs 3+ hours manual</em>' }
+    ]
+  };
+  return chats[app.id] || [];
+}
+
+// URL parameter support — link from sales tool with ?app=invoice etc.
+const _params = new URLSearchParams(window.location.search);
+const _appParam = _params.get('app');
+if (_appParam) {
+  const _idx = HERO_APPS.findIndex(a => a.id === _appParam);
+  if (_idx >= 0) { currentApp = _idx; }
+}
+
+render();
+</script>
+</body>
+</html>

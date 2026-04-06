@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MSG Pilot Sales Qualification — Straits Interactive</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: { extend: { colors: {
+  si: { primary:'#e5933e', secondary:'#ed6522', dark:'#1F2225', grey:'#6d6e71', light:'#f7f7f7' },
+  jade: { 400:'#4ade80', 500:'#22c55e', 600:'#16a34a' }
+}}}}
+</script>
+<style>
+:root {
+  --bg-deep: #ffffff;
+  --bg-card: #ffffff;
+  --bg-elevated: #f7f7f7;
+  --border-subtle: rgba(109,110,113,0.15);
+  --border-hover: rgba(229,147,62,0.4);
+  --text-primary: #1F2225;
+  --text-secondary: #4a4a4a;
+  --text-muted: #6d6e71;
+  --accent: #e5933e;
+  --accent-secondary: #ed6522;
+  --accent-glow: rgba(229,147,62,0.1);
+  --jade: #22c55e;
+  --signal-low: #c4c4c4;
+  --signal-med: #e5933e;
+  --signal-high: #ed6522;
+  --signal-max: #22c55e;
+  --card-bg: #ffffff;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.04);
+}
+
+* { box-sizing: border-box; }
+body { font-family: 'Open Sans', Arial, Calibri, sans-serif; background: #f2f2f2; color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: Arial, sans-serif; font-weight: 700; }
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  position: relative; z-index: 1;
+  box-shadow: var(--shadow-md);
+}
+.card-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Segmented gauge for scoring */
+.gauge {
+  display: flex; gap: 6px; position: relative;
+}
+.gauge-segment {
+  flex: 1; position: relative; cursor: pointer;
+  border-radius: 10px; padding: 14px 8px 12px;
+  border: 1.5px solid var(--border-subtle);
+  background: #fff;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+}
+.gauge-segment:hover {
+  border-color: var(--border-hover);
+  background: rgba(229,147,62,0.04);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.gauge-segment .label {
+  font-size: 0.8rem; font-weight: 500; line-height: 1.3;
+  color: var(--text-muted);
+  transition: color 0.25s;
+}
+.gauge-segment .dot {
+  width: 8px; height: 8px; border-radius: 50%; margin: 0 auto 8px;
+  background: var(--signal-low); opacity: 0.4;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.gauge-segment[data-level="1"] .dot { background: var(--signal-med); }
+.gauge-segment[data-level="2"] .dot { background: var(--signal-high); }
+.gauge-segment[data-level="3"] .dot { background: var(--signal-max); }
+
+/* Selected states */
+.gauge-segment.sel-0 { border-color: var(--signal-low); background: rgba(196,196,196,0.1); }
+.gauge-segment.sel-0 .dot { opacity: 1; box-shadow: 0 0 8px rgba(196,196,196,0.5); transform: scale(1.4); }
+.gauge-segment.sel-0 .label { color: var(--text-primary); }
+
+.gauge-segment.sel-1 { border-color: var(--signal-med); background: rgba(229,147,62,0.08); }
+.gauge-segment.sel-1 .dot { opacity: 1; box-shadow: 0 0 10px rgba(229,147,62,0.4); transform: scale(1.4); }
+.gauge-segment.sel-1 .label { color: #c47a2a; }
+
+.gauge-segment.sel-2 { border-color: var(--signal-high); background: rgba(237,101,34,0.08); }
+.gauge-segment.sel-2 .dot { opacity: 1; box-shadow: 0 0 12px rgba(237,101,34,0.4); transform: scale(1.4); }
+.gauge-segment.sel-2 .label { color: #d45a1a; }
+
+.gauge-segment.sel-3 { border-color: var(--signal-max); background: rgba(34,197,94,0.05); }
+.gauge-segment.sel-3 .dot { opacity: 1; box-shadow: 0 0 14px rgba(34,197,94,0.4); transform: scale(1.4); }
+.gauge-segment.sel-3 .label { color: #16a34a; }
+
+/* Progress dots */
+.step-dots { display: flex; gap: 6px; align-items: center; }
+.step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--signal-low); opacity: 0.3; transition: all 0.3s; }
+.step-dot.active { background: var(--accent); opacity: 1; width: 24px; border-radius: 4px; }
+.step-dot.done { background: var(--jade); opacity: 0.7; }
+
+/* Tabs */
+.tab { padding: 8px 16px; font-size: 0.82rem; font-weight: 600; border-radius: 8px; transition: all 0.2s; color: var(--text-muted); letter-spacing: 0.02em; }
+.tab:hover { color: var(--accent); background: rgba(229,147,62,0.06); }
+.tab.on { color: #fff; background: linear-gradient(135deg, #e5933e, #ed6522); box-shadow: 0 2px 8px rgba(229,147,62,0.3); }
+
+/* Industry cards */
+.ind-card {
+  border: 1.5px solid var(--border-subtle); border-radius: 12px; padding: 16px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; text-align: left;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.ind-card:hover { border-color: var(--border-hover); transform: translateY(-2px); background: rgba(229,147,62,0.03); box-shadow: var(--shadow-md); }
+.ind-card.picked { border-color: var(--accent); background: rgba(229,147,62,0.06); box-shadow: 0 4px 16px rgba(229,147,62,0.15); }
+
+/* Thermal bar for score breakdown */
+.thermal-bar { height: 6px; border-radius: 3px; background: #e8e8e8; overflow: hidden; }
+.thermal-fill { height: 100%; border-radius: 3px; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* Result badges */
+.badge-hot { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; }
+.badge-warm { background: linear-gradient(135deg, #e5933e, #ed6522); color: white; }
+.badge-cold { background: linear-gradient(135deg, #9ca3af, #6d6e71); color: white; }
+
+/* Misc */
+.fade-in { animation: fadeIn 0.35s ease-out; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
+.case-card { transition: all 0.2s; cursor: pointer; }
+.case-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+select { background: #fff; color: var(--text-primary); border: 1px solid var(--border-subtle); font-family: 'Open Sans', Arial, sans-serif; box-shadow: var(--shadow-sm); }
+input[type="number"] {
+  background: #fff; border: 1.5px solid var(--border-subtle); color: var(--text-primary);
+  font-family: 'Open Sans', Arial, sans-serif; border-radius: 10px; padding: 12px 16px; font-size: 1.1rem; font-weight: 600;
+  transition: border-color 0.2s; box-shadow: var(--shadow-sm);
+}
+input[type="number"]:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-glow); }
+
+/* SI Brand accent bar */
+header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #e5933e, #ed6522);
+}
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- Header -->
+<header class="sticky top-0 z-50" style="background:rgba(255,255,255,0.95); backdrop-filter:blur(12px); border-bottom:1px solid var(--border-subtle); position:relative;">
+  <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between flex-wrap gap-2">
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <svg width="32" height="32" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="url(#si-grad)"/><text x="16" y="22" text-anchor="middle" fill="white" font-family="Arial" font-weight="700" font-size="18">SI</text><defs><linearGradient id="si-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e5933e"/><stop offset="100%" stop-color="#ed6522"/></linearGradient></defs></svg>
+        <div>
+          <div class="text-sm font-bold tracking-tight" style="color:var(--text-primary)">Pilot Sales Tool</div>
+          <div class="text-xs" style="color:var(--accent)">Straits Interactive <span style="color:var(--text-muted)">×</span> Capabara</div>
+        </div>
+      </div>
+    </div>
+    <div class="flex gap-1" id="tab-bar"></div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-6 py-8" id="main-content"></main>
+
+<script>
+// ==================== DATA ====================
+const INDUSTRIES = {
+  manufacturing: {
+    name: "Manufacturing / Trading", icon: "🏭",
+    heroAppId: "invoice",
+    heroApp: "Invoice Analyzer + PO Matcher",
+    heroDesc: "Upload Invoice → Extract Line Items → Match Against POs → Generate Discrepancy Report",
+    workflows: ["Invoice Data Extraction","Purchase Order Processor","Three-Way Invoice Matcher","BOM Version Reconciler","Supplier Certificate Monitor","Quote Comparison & Vendor Selection","Expense Report Processor","Warranty Document Tracker","Shipping Document Processor","Customs Documentation Validator"],
+    pilotBundle: [
+      { name: "Smart Invoice Processing", price: 30000, desc: "Auto-extract, validate, match invoices to POs. Handles 50-200 invoices/month." },
+      { name: "Vendor & Supply Chain Intelligence", price: 30000, desc: "Quote comparison, supplier cert monitoring, customs doc validation." },
+      { name: "Financial Operations Suite", price: 30000, desc: "Expense reports, bank statement analysis, tax document organization." }
+    ],
+    questions: [
+      { q: "How many invoices or POs do you process monthly?", hint: "Volume drives ROI — more docs = bigger win", labels: ["Under 10","10 – 50","50 – 200","200 +"] },
+      { q: "How many different supplier formats do you deal with?", hint: "More formats = more manual pain", labels: ["Single format","2 – 3 formats","4 – 6 formats","7 + formats"] },
+      { q: "Who handles this work, and how many hours per week?", hint: "Staff time is the cost baseline", labels: ["Under 2 hrs","2 – 5 hrs","5 – 15 hrs","15 + hrs"] },
+      { q: "What happens when an invoice doesn't match a PO?", hint: "Error impact reveals hidden costs", labels: ["No real issue","Minor delays","Significant rework","Major disruption"] },
+      { q: "What accounting tools do you already use?", hint: "Google/QB = easy to integrate", labels: ["SAP / Custom ERP","Xero / MYOB","QuickBooks","Google Sheets"] },
+      { q: "What's the worst invoice you deal with?", hint: "This becomes the demo showstopper", labels: ["Clean digital PDFs","Mixed formats","Scanned documents","Handwritten / messy"] }
+    ]
+  },
+  professional_services: {
+    name: "Professional Services", icon: "⚖️",
+    heroAppId: "contract",
+    heroApp: "Contract Risk Analyzer",
+    heroDesc: "Upload Contract → Extract Key Clauses → Flag Risk Areas → Generate Risk Summary",
+    workflows: ["Contract Review & Risk Analysis","NDA Compliance Checker","RFP/RFQ Proposal Generator","GDPR Compliance Scanner","Regulatory Compliance Checker","M&A Contract Review","Whitepaper/Report Summarizer","Competitor Analysis Extractor"],
+    pilotBundle: [
+      { name: "Smart Contract Review", price: 30000, desc: "Auto-extract clauses, flag risks, generate compliance reports for contracts & NDAs." },
+      { name: "Compliance Intelligence", price: 30000, desc: "GDPR/regulatory scanning, compliance monitoring across document sets." },
+      { name: "Business Development Suite", price: 30000, desc: "RFP response generation, competitor analysis, proposal automation." }
+    ],
+    questions: [
+      { q: "How many contracts or NDAs do you review monthly?", hint: "Volume = qualification strength", labels: ["Under 5","5 – 15","15 – 40","40 +"] },
+      { q: "How many different contract formats from counterparties?", hint: "Variety means manual effort", labels: ["1 – 2 templates","3 – 5 formats","6 – 10 formats","10 + formats"] },
+      { q: "Who reviews contracts and at what hourly rate?", hint: "Expensive reviewers = high ROI", labels: ["Admin ~$25/hr","Paralegal ~$50/hr","Jr lawyer ~$100/hr","Sr lawyer $200+/hr"] },
+      { q: "What's the cost when a risky clause gets missed?", hint: "High stakes = urgency to buy", labels: ["Minimal impact","Moderate rework","Significant penalty","Lawsuit risk"] },
+      { q: "What tools do you use for contract management?", hint: "Manual/email = easiest sell", labels: ["CLM software","SharePoint","Email + Word","Paper / manual"] },
+      { q: "What makes your most complex contract hard?", hint: "Complexity = demo opportunity", labels: ["Standard templates","Some variation","Multi-party deals","Cross-border complex"] }
+    ]
+  },
+  healthcare: {
+    name: "Healthcare", icon: "🏥",
+    heroAppId: "claims",
+    heroApp: "Insurance Claim Processor",
+    heroDesc: "Upload Claim → Extract Patient & Procedure Data → Validate Codes → Generate Submission Package",
+    workflows: ["Insurance Claim Processor","Insurance Pre-Authorization","Patient Intake Processor","Patient Referral Processor","Medical Records Intake","Medical Bill Analyzer","Lab Results Extractor","HIPAA Compliance Scanner","Extract Trial Data PDFs"],
+    pilotBundle: [
+      { name: "Claims & Billing Intelligence", price: 30000, desc: "Auto-process insurance claims, pre-auth requests, and medical bill analysis." },
+      { name: "Patient Flow Automation", price: 30000, desc: "Intake forms, referral processing, records management." },
+      { name: "Compliance & Clinical Support", price: 30000, desc: "HIPAA scanning, lab results routing, clinical trial data extraction." }
+    ],
+    questions: [
+      { q: "How many claims or patient documents per month?", hint: "Volume is the primary qualifier", labels: ["Under 20","20 – 50","50 – 200","200 +"] },
+      { q: "How many different insurance companies or form types?", hint: "Multiple payers = pain multiplier", labels: ["Single payer","2 – 3 payers","4 – 8 payers","8 + payers"] },
+      { q: "How many staff hours go into claims processing weekly?", hint: "Time cost is the ROI baseline", labels: ["Under 5 hrs","5 – 10 hrs","10 – 25 hrs","25 + hrs"] },
+      { q: "What happens with denied or delayed claims?", hint: "Revenue impact creates urgency", labels: ["Rare issue","Occasional rework","Frequent delays","Major revenue loss"] },
+      { q: "What EMR or practice management software?", hint: "Common systems = easier integration", labels: ["Custom system","Legacy EMR","Modern EMR","Manual / paper"] },
+      { q: "What's the messiest claim you regularly deal with?", hint: "Show them AI handles the worst case", labels: ["All digital forms","Mostly digital","Mixed with scans","Handwritten forms"] }
+    ]
+  },
+  hr_recruitment: {
+    name: "HR / Recruitment", icon: "👥",
+    heroAppId: "recruiter",
+    heroApp: "Smart Recruiter — Job → CV → Score",
+    heroDesc: "Paste Job Description → Upload CVs → AI Scoring & Ranking → Generate Shortlist Report",
+    workflows: ["Resume Parser","Resume Job Match Scorer","Resume Optimizer & Job Match Scorer","Job Application Processor","Employee Onboarding Processor"],
+    pilotBundle: [
+      { name: "Smart Recruitment Suite", price: 30000, desc: "Resume parsing, AI-powered candidate scoring, job matching." },
+      { name: "Employee Lifecycle Automation", price: 30000, desc: "Onboarding document processing, policy compliance checking." },
+      { name: "HR Analytics & Compliance", price: 30000, desc: "Workforce analytics, training record management, compliance reporting." }
+    ],
+    questions: [
+      { q: "How many CVs or applications do you process monthly?", hint: "High volume = easy qualification", labels: ["Under 20","20 – 50","50 – 200","200 +"] },
+      { q: "How many different roles are you hiring for?", hint: "Concurrent roles multiply screening time", labels: ["1 role","2 – 3 roles","4 – 8 roles","8 + roles"] },
+      { q: "How many hours does screening take per open role?", hint: "Time per role × roles = total waste", labels: ["Under 2 hrs","2 – 5 hrs","5 – 10 hrs","10 + hrs"] },
+      { q: "What happens when a good candidate gets missed?", hint: "Cost of bad hire is powerful leverage", labels: ["No real impact","Minor delay","Lost candidate","Re-hire costs"] },
+      { q: "What ATS or HR tools do you currently use?", hint: "Email/manual = low barrier to sell", labels: ["Full ATS","Basic ATS","Excel / Sheets","Email inbox"] },
+      { q: "What's the hardest role to screen for?", hint: "Niche roles make the best demo", labels: ["Generic roles","Some specifics","Technical roles","Niche specialists"] }
+    ]
+  },
+  real_estate: {
+    name: "Real Estate / Property", icon: "🏠",
+    heroAppId: "lease",
+    heroApp: "Lease Agreement Analyzer",
+    heroDesc: "Upload Lease → Extract Key Terms → Flag Unusual Clauses → Generate Tenant Summary",
+    workflows: ["Lease Agreement Analyzer","Commercial Lease Abstraction","Property Listing Extractor","Title Deed Risk Scorer","Closing Document Validator","Mortgage Application Validator","FinCEN Real Estate Reporter"],
+    pilotBundle: [
+      { name: "Smart Lease Intelligence", price: 30000, desc: "Auto-analyze leases, extract key terms, flag risks for commercial & residential." },
+      { name: "Transaction Document Suite", price: 30000, desc: "Title deed analysis, closing doc validation, mortgage application processing." },
+      { name: "Property Operations & Compliance", price: 30000, desc: "Listing extraction, FinCEN reporting, property portfolio analytics." }
+    ],
+    questions: [
+      { q: "How many leases or property documents do you handle monthly?", hint: "Volume is your key qualifier", labels: ["Under 5","5 – 15","15 – 30","30 +"] },
+      { q: "How many different document types do you manage?", hint: "Variety increases manual effort", labels: ["Leases only","2 – 3 types","4 – 6 types","6 + types"] },
+      { q: "How long does each document review take?", hint: "Time per doc × volume = waste", labels: ["Under 10 min","10 – 30 min","30 – 60 min","60 + min"] },
+      { q: "What's the cost when a lease clause is missed?", hint: "Legal risk drives urgency", labels: ["No real issue","Minor cost","Significant cost","Legal exposure"] },
+      { q: "What property management software do you use?", hint: "Manual processes = easiest sell", labels: ["Full PM system","Basic software","Excel / Sheets","Paper files"] },
+      { q: "What's your most complex lease scenario?", hint: "Complexity = best demo material", labels: ["Standard residential","Multi-unit","Commercial","Multi-tenant complex"] }
+    ]
+  },
+  logistics: {
+    name: "Logistics / Trade", icon: "🚢",
+    heroAppId: "vendor",
+    heroApp: "Quote Comparison & Vendor Selection",
+    heroDesc: "Upload Vendor Quotes → Extract Pricing & Terms → Compare Side-by-Side → Generate Recommendation",
+    workflows: ["Shipping Document Processor","Bill of Lading Tracker","Customs Documentation Validator","Supplier Certificate Monitor","Warranty Document Tracker"],
+    pilotBundle: [
+      { name: "Smart Shipping Intelligence", price: 30000, desc: "BOL tracking, shipping doc processing, customs validation." },
+      { name: "Supply Chain Compliance", price: 30000, desc: "Supplier cert monitoring, warranty tracking, vendor compliance." },
+      { name: "Trade Document Automation", price: 30000, desc: "Cross-border documentation, regulatory compliance, trade analytics." }
+    ],
+    questions: [
+      { q: "How many shipping documents do you process monthly?", hint: "Volume qualifies the opportunity", labels: ["Under 10","10 – 30","30 – 100","100 +"] },
+      { q: "How many trade lanes or countries are involved?", hint: "Cross-border = high compliance pain", labels: ["Domestic only","1 – 2 countries","3 – 5 countries","6 + countries"] },
+      { q: "How many staff hours go into document processing weekly?", hint: "Staff time is your ROI baseline", labels: ["Under 5 hrs","5 – 10 hrs","10 – 25 hrs","25 + hrs"] },
+      { q: "What happens when there's a documentation error?", hint: "Fines and delays create urgency", labels: ["Rare issue","Occasional delays","Frequent fines","Shipment holds"] },
+      { q: "What logistics or TMS software do you use?", hint: "Manual = easy to sell", labels: ["Full TMS","Basic system","Excel / Sheets","Manual / paper"] },
+      { q: "What's your most complex shipping scenario?", hint: "Complexity makes the best demo", labels: ["Standard domestic","International basic","Multi-modal","Hazmat / special"] }
+    ]
+  },
+  education: {
+    name: "Education / Training", icon: "🎓",
+    heroAppId: "transcript",
+    heroApp: "Transcript Evaluator & Credit Mapper",
+    heroDesc: "Upload Transcripts → Extract Grades & Credits → Map to Requirements → Generate Eligibility Report",
+    workflows: ["Education Transcript Processor","International Transcript Evaluator","Accreditation Document Assembler","Syllabus Processor","Academic Paper Finder","Research Paper Analyzer","Thesis/Dissertation Research Assistant"],
+    pilotBundle: [
+      { name: "Student Records Intelligence", price: 30000, desc: "Transcript processing, international credit evaluation, records automation." },
+      { name: "Accreditation & Curriculum Suite", price: 30000, desc: "Accreditation doc assembly, syllabus processing, compliance reporting." },
+      { name: "Research & Knowledge Management", price: 30000, desc: "Academic paper finding, research analysis, thesis support tools." }
+    ],
+    questions: [
+      { q: "How many transcripts or student documents per term?", hint: "Seasonal volume creates urgency", labels: ["Under 50","50 – 150","150 – 500","500 +"] },
+      { q: "How many different institutions or formats?", hint: "International = high complexity", labels: ["Single institution","2 – 5 sources","5 – 15 sources","15 + international"] },
+      { q: "How many staff hours go into records processing per term?", hint: "Seasonal crunch is the pain point", labels: ["Under 10 hrs","10 – 30 hrs","30 – 60 hrs","60 + hrs"] },
+      { q: "What happens when an evaluation has errors?", hint: "Accreditation risk = top urgency", labels: ["No real issue","Student complaints","Process delays","Accreditation risk"] },
+      { q: "What student information system do you use?", hint: "Legacy/manual = easiest to sell", labels: ["Modern SIS","Older SIS","Excel / Sheets","Paper-based"] },
+      { q: "What's the hardest transcript to evaluate?", hint: "Foreign credentials = demo goldmine", labels: ["Standard local","Other local","Regional foreign","International complex"] }
+    ]
+  },
+  general_sme: {
+    name: "General SME", icon: "🏢",
+    heroAppId: "vendor",
+    heroApp: "Quote Comparison & Vendor Selection",
+    heroDesc: "Upload Vendor Quotes → Extract Pricing & Terms → Compare Side-by-Side → Generate Recommendation",
+    workflows: ["Quote Comparison & Vendor Selection","Expense Report Processor","Receipt Scanner & Tax Organizer","Bank Statement Analyzer","Financial Report Analyzer","SOP Document Processor","Product Manual QA Bot","Newsletter/PDF Extractor","Ebook Chapter Summarizer"],
+    pilotBundle: [
+      { name: "Smart Finance Operations", price: 30000, desc: "Invoice processing, expense reports, bank statement analysis, tax organization." },
+      { name: "Vendor & Procurement Intelligence", price: 30000, desc: "Quote comparison, vendor selection, purchase order automation." },
+      { name: "Knowledge & Document Management", price: 30000, desc: "SOP processing, product manual Q&A, document summarization." }
+    ],
+    questions: [
+      { q: "How many documents does your team process monthly?", hint: "Any document type counts", labels: ["Under 10","10 – 50","50 – 200","200 +"] },
+      { q: "How many different document types or sources?", hint: "Variety = manual effort", labels: ["1 – 2 types","3 – 5 types","6 – 10 types","10 + types"] },
+      { q: "Who handles document processing, and how many hours?", hint: "Hours × rate = your ROI number", labels: ["Under 2 hrs/wk","2 – 5 hrs","5 – 15 hrs","15 + hrs"] },
+      { q: "What's the cost when documents are processed wrong?", hint: "Error impact reveals urgency", labels: ["Minimal","Some rework","Significant delays","Major cost"] },
+      { q: "What tools does your team use daily?", hint: "Google/Office = fast integration", labels: ["ERP / Custom","Industry-specific","Office suite","Google Workspace"] },
+      { q: "What's the document everyone dreads?", hint: "This IS your demo — process it live", labels: ["All straightforward","Some complexity","Mostly complex","Nightmare docs"] }
+    ]
+  }
+};
+
+const CASE_STUDIES = [
+  { id:"construction_invoice", title:"Construction Invoice Automation", industry:"Manufacturing", source:"Duy Bui — Skool", client:"Local construction company", problem:"80+ invoices/month from 15+ suppliers. Mix of PDFs, faxes, handwritten. Bookkeeper spent 12 hrs/month at $35/hr = $420/month waste.", solution:"n8n workflow: Google Drive → OCR extraction → Data validation → Database entry → QuickBooks prep", result:"12 hrs → 2 hrs/month. Error rate near zero. Generated referral.", pricing:"$2,200 setup + $180/mo", closeTime:"3 days", buildTime:"90 min", keyInsight:"\"Probably the easiest client conversation I've ever had\" — Clear pain, quantifiable ROI. They didn't negotiate.", roiCalc:"10 hrs × $35/hr = $350/mo value vs $180/mo charge", talkTrack:"There's an interesting case of a construction company that was processing over 80 invoices a month from 15-plus suppliers — a mix of clean PDFs, phone photos, even faxes that looked like they'd been through a washing machine. Their bookkeeper was spending 12 hours a month just on data entry — that's like losing a day and a half every month copying numbers from paper to screen. They decided to set up an AI workflow that reads every invoice format — messy handwriting, blurry scans, you name it — and enters it straight into their accounting system. Twelve hours became two. Zero errors, which meant no more chasing suppliers over mismatched amounts. The whole thing was up and running within 90 minutes. That's the kind of approach we'd recommend for your situation — start with the document that eats the most time and automate that first." },
+  { id:"budget_save", title:"The 'Almost Said No' Budget Save", industry:"General SME", source:"Duy Bui — Skool", client:"SME prospect who rejected initial quote", problem:"Prospect said $1,600 setup + $140/month was over budget. About to walk away.", solution:"Used 'What would need to be true?' technique. Revealed they'd try smaller scope.", result:"Restructured to $800 for invoice processing only. 60-day proof period.", pricing:"$800 starter → expand", closeTime:"Same call", buildTime:"Reduced scope", keyInsight:"52% of rejections convert with 'What would need to be true for this to work?'", roiCalc:"Recovered dead deal → $1,600+ later", talkTrack:"There's a case study that really stuck with me. A small business owner was quoted around $1,600 for an automation setup and initially said 'not in the budget.' The conversation could have ended there. But instead of walking away, the provider asked one question: 'What would need to be true for this to work for you?' Turns out, the owner didn't have a problem with the concept — they just couldn't justify the full package upfront without seeing proof first. So they carved out just the invoice processing piece — $800, 60-day trial. Think of it like test-driving a car before you buy it. Within two months, the savings were so obvious that the business upgraded to the full package on their own. That's an approach we'd recommend — you don't have to commit to everything today. Start with your biggest pain point, prove the value, and grow from there." },
+  { id:"mvp_build", title:"$12K MVP Build + Retainer", industry:"General SME", source:"AI Automation Society", client:"Enterprise client", problem:"Needed custom AI automation. Started as exploratory conversation.", solution:"Positioned as MVP with expansion roadmap and ongoing retainer.", result:"$12K initial + long-term retainer.", pricing:"$12K + retainer", closeTime:"Multi-meeting", buildTime:"MVP sprint", keyInsight:"Frame as 'MVP → prove value → expand' rather than one-time builds.", roiCalc:"$12K first phase + recurring", talkTrack:"Think about how companies like Grab or Shopee started — they didn't build the whole platform on day one. They launched one feature, proved people wanted it, then expanded. There's an enterprise that took this exact approach with AI automation. They had this ambition to 'automate everything' — which sounds great, but trying to do it all at once is like renovating every room in your house simultaneously. So they focused on their single biggest bottleneck — document processing that was eating 40 hours a week — and built a focused solution in a sprint. Within 30 days, the results spoke for themselves: the team got two days a week back. After that, expanding to the next process was a no-brainer because the value was already proven. This is the approach we'd recommend — start with the one thing that hurts most, show measurable results, then scale from there." },
+  { id:"aviation_ceo", title:"$19M Aviation Company CEO Call", industry:"Logistics", source:"AI Automation Society", client:"$19M aviation company", problem:"CEO exploring AI automation for operations.", solution:"Targeted decision-maker directly, skipped gatekeepers.", result:"Direct CEO access with budget authority.", pricing:"Enterprise-level", closeTime:"In progress", buildTime:"N/A", keyInsight:"Always target the person with sign-off authority.", roiCalc:"Potential 5-6 figure deal", talkTrack:"There's a fascinating case of a $19 million aviation company exploring AI automation. The initial conversations were with the operations manager — great enthusiasm, lots of interest, but every decision ended with 'let me run it up the chain.' The breakthrough came when the conversation moved directly to the CEO. It's like selling a house — you want to talk to the buyer, not the estate agent's assistant. The CEO understood immediately: their operations team was drowning in shipping documentation, compliance checks, and customs paperwork. When you put the numbers in front of someone who actually signs cheques, the conversation shifts from 'can we afford this?' to 'can we afford NOT to do this?' That's an important lesson — making sure we're having this conversation with the right people in your organisation, the ones who can see the bigger picture and act on it." },
+  { id:"whatsapp", title:"WhatsApp Business Assistant", industry:"General SME", source:"AI Automation Society", client:"Small business owner", problem:"Overwhelmed managing schedules and tasks via WhatsApp.", solution:"AI assistant handling schedules, reminders, task management.", result:"Immediate client satisfaction. First shipped automation.", pricing:"Starter tier", closeTime:"Quick close", buildTime:"< 1 week", keyInsight:"WhatsApp is #1 business tool in ASEAN. Automating it = easy first win.", roiCalc:"Hours saved on scheduling", talkTrack:"You know how everyone in Southeast Asia runs their business through WhatsApp? Clients message at 10pm, suppliers send quotes at 6am, your team coordinates through group chats — it's like trying to run an office through your phone's message app. There was a business owner who was literally waking up at midnight to reply to customer messages because they were afraid of losing the sale. They set up an AI assistant — think of it as a virtual receptionist who never sleeps. It handles scheduling, sends reminders, answers FAQs, and routes urgent messages to the right person. That business owner went from being chained to their phone 18 hours a day to checking in twice. It's like going from hand-washing all your laundry to getting a washing machine — same clean clothes, fraction of the effort. This is something we could explore for your team as well." },
+  { id:"housing_crm", title:"CRM for Veteran Housing Org", industry:"Non-Profit", source:"AI Automation Society", client:"Veteran housing organization", problem:"Needed better client tracking and document management.", solution:"Custom CRM with AI document processing.", result:"First paying client. Improved intake processing.", pricing:"Custom build", closeTime:"First win", buildTime:"Custom dev", keyInsight:"Non-profits have real budgets. Grant funding often covers tech.", roiCalc:"Reduced processing + better tracking", talkTrack:"Here's a case that might surprise you. A veteran housing organisation was tracking hundreds of beneficiaries using paper files and sticky notes. Picture a filing cabinet bursting at the seams, with case workers flipping through folders trying to find who's due for a follow-up — like a hospital trying to manage patient records on index cards. They implemented a simple CRM with AI document processing — intake forms get scanned and sorted automatically, follow-ups get scheduled, nothing falls through the cracks. The interesting takeaway: if AI can transform operations for a non-profit running on a shoestring budget, imagine what it can do for a business like yours with actual revenue behind it. And here's something people don't always realise — that organisation used grant funding earmarked for technology. Same principle applies to the MSG grant available to you: the government wants SMEs to modernise, and they're covering 90% of the cost." },
+  { id:"arabic", title:"2,000+ Pages Arabic Translation", industry:"Education", source:"AI Automation Society", client:"Academic institution", problem:"Translate 2,000+ pages of ancient Arabic texts to bilingual PDFs.", solution:"Automated translation pipeline via Claude Code.", result:"2,000+ pages — months of manual work automated.", pricing:"Custom project", closeTime:"N/A", buildTime:"Pipeline", keyInsight:"Niche document processing at scale = goldmine.", roiCalc:"Months → automated", talkTrack:"There's a remarkable case of an academic institution that had 2,000 pages of ancient Arabic texts needing translation into bilingual PDFs. To do this manually, you'd need a team of translators working for months — six figures in labour costs and a timeline stretching into next year. It's like being asked to hand-copy an entire library. They set up an automated translation pipeline that processed the entire collection — what would have taken a team of specialists months was done in a fraction of the time. Now, your situation is different — you're not translating ancient texts — but the principle is identical. You have a mountain of documents that people are processing one by one. Every document is basically the same steps: read it, extract the important bits, validate, file it. That's exactly what AI does best — repetitive, rules-based work at a scale no human team can match. This is the kind of approach we'd recommend exploring for your document workflows." }
+];
+
+const SALES_TIPS = [
+  { title: "The Problem Calculator", tip: "Do this LIVE on the call: Hours/month × hourly cost = monthly waste. Then show: $30K pilot (90% funded = $3,000 out of pocket) vs annual savings. Make the math undeniable." },
+  { title: "Process Their Worst Doc", tip: "Always ask: 'What's the document your team dreads most?' Process it live in Capabara. Show the chain running. 'Your staff spends X hours on this. The AI did it in 30 seconds.'" },
+  { title: "The 52% Objection Converter", tip: "When they say no, ask: 'What would need to be true for this to work for you?' Converts 52% of rejections by uncovering the real constraint." },
+  { title: "MVP → Expand Strategy", tip: "Never pitch the full $90K upfront. Start with one $30K pilot. Prove value in 30 days. Then expand." },
+  { title: "Target Decision Makers", tip: "Always sell to the person with sign-off authority. If your contact says 'I need to check,' ask to join that conversation." },
+  { title: "The 3-Message Outreach", tip: "1) 'Noticed you struggle with [X]. Mind if I share something?' 2) 'Built automation for this. Want a 10-min demo?' 3) 'Tuesday or Thursday?'" },
+  { title: "5-Day Delivery", tip: "Day 1: Core running. Day 2: Test with real data. Day 3: Loom walkthrough. Day 4: Handoff. Day 5: Testimonial request." },
+  { title: "MSG Grant Pitch", tip: "'The government pays 90%. Your cost is $3,000 for a $30,000 AI transformation. Only X slots left this quarter.' Create urgency." }
+];
+
+// Industry → relevant case study IDs + situational tips
+const INTEL_MAP = {
+  manufacturing: { cases: ['construction_invoice','budget_save','mvp_build'], primary: 'construction_invoice' },
+  professional_services: { cases: ['mvp_build','aviation_ceo','budget_save'], primary: 'mvp_build' },
+  healthcare: { cases: ['construction_invoice','budget_save','mvp_build'], primary: 'construction_invoice' },
+  hr_recruitment: { cases: ['whatsapp','mvp_build','budget_save'], primary: 'mvp_build' },
+  real_estate: { cases: ['housing_crm','construction_invoice','budget_save'], primary: 'housing_crm' },
+  logistics: { cases: ['aviation_ceo','construction_invoice','mvp_build'], primary: 'aviation_ceo' },
+  education: { cases: ['arabic','mvp_build','budget_save'], primary: 'arabic' },
+  general_sme: { cases: ['construction_invoice','whatsapp','budget_save'], primary: 'construction_invoice' }
+};
+
+// Situational coaching based on score patterns
+function getSituationalTips(tier, scores, industry) {
+  const tips = [];
+  const volScore = scores[0] || 0; // Q1: volume
+  const hoursScore = scores[2] || 0; // Q3: hours
+  const errorScore = scores[3] || 0; // Q4: error impact
+  const toolScore = scores[4] || 0; // Q5: current tools
+  const complexScore = scores[5] || 0; // Q6: document complexity
+
+  if (tier === 'HOT') {
+    tips.push({ icon:'🎯', title:'Strike while hot', tip:'This prospect has high volume AND high pain. Don\'t schedule a follow-up — demo NOW and close in the same meeting. Every day you wait, they get distracted.' });
+    if (complexScore >= 2) tips.push({ icon:'📄', title:'Use their worst doc', tip:'They have complex documents. Ask for one RIGHT NOW. Process it live. This is your "mic drop" moment — nothing else you say will be as convincing.' });
+    if (errorScore >= 2) tips.push({ icon:'💸', title:'Lead with error cost', tip:'They\'re bleeding money on errors. Quantify it: "If errors cost you $X per incident and you have Y incidents/month, that\'s $Z/year the AI eliminates."' });
+  } else if (tier === 'WARM') {
+    tips.push({ icon:'🎬', title:'Send a Loom first', tip:'Record a 3-minute Loom showing the industry scenario demo processing a sample document from their industry. Send it within 24 hours. Then book the live demo.' });
+    if (volScore <= 1) tips.push({ icon:'📈', title:'Volume is low — sell the future', tip:'Their volume is modest now. Pitch growth: "As you scale, this saves more every month. Start now while the MSG grant covers 90%."' });
+    if (toolScore <= 1) tips.push({ icon:'🔧', title:'They have existing tools', tip:'Don\'t position as replacement — position as enhancement. "This works alongside [their tool]. It handles the document processing that [tool] can\'t."' });
+    tips.push({ icon:'⏰', title:'Create urgency', tip:'"We have limited MSG pilot slots this quarter. I can hold one for you, but I need confirmation by [date]." Scarcity converts warm to hot.' });
+  } else {
+    tips.push({ icon:'📋', title:'Nurture, don\'t push', tip:'Low score means low pain or low volume right now. Add to quarterly newsletter. Check back when their situation changes.' });
+    tips.push({ icon:'🔄', title:'Ask for referrals', tip:'Even cold prospects know people: "This may not be the right fit for you now. Do you know anyone who processes a lot of [documents] who might benefit?"' });
+    if (hoursScore <= 1) tips.push({ icon:'💡', title:'Maybe wrong department', tip:'Low hours might mean you\'re talking to the wrong person. Ask: "Who in your company spends the MOST time on document processing?"' });
+  }
+
+  // Universal tips
+  if (toolScore >= 2) tips.push({ icon:'✅', title:'Easy integration signal', tip:'They use Google/basic tools — integration will be straightforward. Mention this: "Since you use [tool], we can have this running in days, not weeks."' });
+
+  return tips;
+}
+
+// ==================== STATE ====================
+const S = { tab:'qualify', industry:'', scores:{}, step:0, hourlyRate:35, hoursPerMonth:40, showResults:false, expandedCase:null, proposalIndustry:'', intelOpen:false };
+
+// ==================== RENDER ====================
+function renderTabs() {
+  const tabs = {qualify:'Qualify',dashboard:'Dashboard',proposals:'Proposals',casestudies:'Case Studies',tips:'Playbook'};
+  document.getElementById('tab-bar').innerHTML = Object.entries(tabs).map(([k,v]) =>
+    `<button onclick="go('${k}')" class="tab ${S.tab===k?'on':''}">${v}</button>`
+  ).join('');
+}
+function go(tab) { S.tab = tab; renderTabs(); renderMain(); }
+function renderMain() {
+  const el = document.getElementById('main-content');
+  el.className = 'max-w-6xl mx-auto px-6 py-8';
+  switch(S.tab) {
+    case 'qualify': el.innerHTML = pageQualify(); break;
+    case 'dashboard': el.innerHTML = pageDashboard(); break;
+    case 'proposals': el.innerHTML = pageProposals(); break;
+    case 'casestudies': el.innerHTML = pageCaseStudies(); break;
+    case 'tips': el.innerHTML = pageTips(); break;
+  }
+}
+
+// ---- QUALIFY ----
+function pageQualify() {
+  const ind = INDUSTRIES[S.industry];
+  return `<div class="fade-in">
+    <div class="mb-10">
+      <h1 class="text-3xl mb-2 tracking-tight">Client Qualification</h1>
+      <p style="color:var(--text-muted); font-size:0.9rem;">Select their industry, then score the discovery call. Two questions at a time.</p>
+    </div>
+    <div class="card p-6 mb-8">
+      <div class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--text-muted);">Industry</div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        ${Object.entries(INDUSTRIES).map(([k,v]) => `
+          <button onclick="pickIndustry('${k}')" class="ind-card ${S.industry===k?'picked':''}">
+            <div class="text-2xl mb-2">${v.icon}</div>
+            <div class="text-sm font-semibold">${v.name}</div>
+            <div class="text-xs" style="color:var(--text-muted)">${v.workflows.length} workflows</div>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+    ${ind ? wizardSection(ind) : `<div class="text-center py-16" style="color:var(--text-muted)"><div class="text-4xl mb-4 opacity-30">↑</div>Pick an industry to start scoring</div>`}
+  </div>`;
+}
+
+function wizardSection(ind) {
+  const totalQ = ind.questions.length;
+  const totalSteps = Math.ceil(totalQ / 2);
+  const isLastStep = S.step >= totalSteps - 1;
+  const totalScore = Object.values(S.scores).reduce((a,b)=>a+b, 0);
+  const maxScore = totalQ * 3;
+  const answered = Object.keys(S.scores).length;
+
+  const qi = S.step * 2;
+  const content = ind.questions.slice(qi, qi + 2).map((q, j) => questionCard(q, qi + j)).join('');
+
+  return `
+  <div class="card p-6 mb-6">
+    <div class="flex items-center justify-between mb-5">
+      <div class="step-dots">
+        ${Array.from({length:totalSteps}, (_,i) => `<div class="step-dot ${i===S.step?'active':i<S.step?'done':''}"></div>`).join('')}
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-xs" style="color:var(--text-muted)">${answered} of ${totalQ} answered</div>
+        <div class="px-3 py-1 rounded-full text-xs font-semibold" style="background:${totalScore >= maxScore*0.75 ? 'rgba(34,197,94,0.12);color:#16a34a' : totalScore >= maxScore*0.5 ? 'rgba(229,147,62,0.12);color:#e5933e' : 'rgba(92,80,62,0.2);color:var(--text-muted)'}">
+          ${totalScore} / ${maxScore}
+        </div>
+      </div>
+    </div>
+
+    ${content}
+
+    <div class="flex justify-between mt-8 pt-5" style="border-top:1px solid var(--border-subtle)">
+      <button onclick="wizPrev()" class="px-5 py-2.5 rounded-lg text-sm font-medium transition" style="${S.step===0?'opacity:0.25;cursor:not-allowed;color:var(--text-muted)':'color:var(--text-secondary);border:1px solid var(--border-subtle)'}">
+        ← Back
+      </button>
+      ${!isLastStep ? `
+        <button onclick="wizNext(${totalSteps})" class="px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition" style="background:var(--accent)">
+          Continue →
+        </button>
+      ` : `
+        <button onclick="showResult()" class="px-6 py-2.5 rounded-lg text-sm font-bold text-white transition" style="background:linear-gradient(135deg,#e5933e,#ed6522)">
+          Get Qualification Result →
+        </button>
+      `}
+    </div>
+  </div>
+  `;
+}
+
+function questionCard(q, idx) {
+  const current = S.scores[idx] ?? -1;
+  return `
+  <div class="card-elevated p-5 mb-4" style="animation:fadeIn 0.3s ease ${idx%2===1?'0.08s':'0s'} both">
+    <div class="text-base font-medium mb-1" style="line-height:1.5">${q.q}</div>
+    <div class="text-xs mb-5" style="color:var(--text-muted)">${q.hint}</div>
+    <div class="gauge">
+      ${q.labels.map((label, v) => `
+        <button onclick="score(${idx},${v})" data-level="${v}"
+          class="gauge-segment ${current === v ? 'sel-'+v : ''}">
+          <div class="dot"></div>
+          <div class="label">${label}</div>
+        </button>
+      `).join('')}
+    </div>
+  </div>`;
+}
+
+function roiCalculator(ind) {
+  const m = S.hoursPerMonth * S.hourlyRate;
+  const a = m * 12;
+  const roi = Math.round(((a * 0.7) - 3000) / 3000 * 100);
+  return `
+  <div class="card-elevated p-6">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="text-lg font-semibold" style="font-family:Arial,sans-serif;font-weight:700">Problem Calculator</div>
+      <div class="px-2 py-0.5 rounded text-xs font-medium" style="background:rgba(229,147,62,0.12);color:#e5933e">Do this LIVE on the call</div>
+    </div>
+    <p class="text-xs mb-6" style="color:var(--text-muted)">Pre-filled from your answers — adjust with their actual numbers live on the call</p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+      <div>
+        <label class="text-xs block mb-2" style="color:var(--text-muted)">Hours on this task / month</label>
+        <input type="number" id="inp-hours" value="${S.hoursPerMonth}" oninput="calcUpdate()" onchange="calcUpdate()">
+      </div>
+      <div>
+        <label class="text-xs block mb-2" style="color:var(--text-muted)">Hourly cost (SGD)</label>
+        <input type="number" id="inp-rate" value="${S.hourlyRate}" oninput="calcUpdate()" onchange="calcUpdate()">
+      </div>
+      <div class="flex flex-col justify-end pb-1">
+        <div class="text-xs mb-1" style="color:var(--text-muted)">Monthly waste</div>
+        <div class="text-3xl font-bold" id="calc-monthly" style="color:var(--accent)">$${m.toLocaleString()}</div>
+      </div>
+    </div>
+    <div class="grid grid-cols-3 gap-4 text-center">
+      <div class="card-elevated p-4 rounded-xl">
+        <div class="text-xs mb-1" style="color:var(--text-muted)">Annual waste</div>
+        <div class="text-xl font-bold" id="calc-annual" style="color:#ef4444">$${a.toLocaleString()}</div>
+      </div>
+      <div class="card-elevated p-4 rounded-xl">
+        <div class="text-xs mb-1" style="color:var(--text-muted)">Pilot cost (pocket)</div>
+        <div class="text-xl font-bold" style="color:var(--accent)">$3,000</div>
+        <div class="text-xs" style="color:var(--text-muted)">90% MSG funded</div>
+      </div>
+      <div class="card-elevated p-4 rounded-xl">
+        <div class="text-xs mb-1" style="color:var(--text-muted)">Year 1 ROI</div>
+        <div class="text-xl font-bold" id="calc-roi" style="color:var(--jade)">${roi}%</div>
+        <div class="text-xs" style="color:var(--text-muted)">at 70% savings</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function resultCard(ind, totalScore, maxScore) {
+  let tier, cls, rec, next;
+  if (totalScore >= maxScore * 0.75) { tier='HOT'; cls='badge-hot'; rec='Demo NOW — close same meeting.'; next='Process their worst document live.'; }
+  else if (totalScore >= maxScore * 0.5) { tier='WARM'; cls='badge-warm'; rec='Strong potential — book demo within a week.'; next='Send Loom video, then schedule live demo.'; }
+  else { tier='COLD'; cls='badge-cold'; rec='Low volume or pain — pass for now.'; next='Nurture list. Re-qualify in 3 months.'; }
+
+  // Get contextual intel
+  const intel = INTEL_MAP[S.industry] || INTEL_MAP.general_sme;
+  const primaryCase = CASE_STUDIES.find(c => c.id === intel.primary);
+  const otherCases = intel.cases.filter(id => id !== intel.primary).map(id => CASE_STUDIES.find(c => c.id === id)).filter(Boolean);
+  const sitTips = getSituationalTips(tier, S.scores, S.industry);
+
+  return `
+  <div class="card p-6 fade-in" style="box-shadow:0 0 40px ${tier==='HOT'?'rgba(34,197,94,0.08)':tier==='WARM'?'rgba(229,147,62,0.08)':'transparent'}">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="card-elevated p-4 rounded-xl"><div class="text-xs mb-2" style="color:var(--text-muted)">Demo App</div><div class="font-semibold" style="color:var(--accent)">${ind.heroApp}</div><div class="text-xs mt-1" style="color:var(--text-muted)">${ind.heroDesc}</div></div>
+      <div class="card-elevated p-4 rounded-xl"><div class="text-xs mb-2" style="color:var(--text-muted)">First Pilot</div><div class="font-semibold">${ind.pilotBundle[0].name}</div><div class="text-xs mt-1" style="color:var(--text-muted)">${ind.pilotBundle[0].desc}</div></div>
+      <div class="card-elevated p-4 rounded-xl"><div class="text-xs mb-2" style="color:var(--text-muted)">Full Package</div><div class="font-semibold text-xl" style="color:var(--jade)">$90,000</div><div class="text-xs mt-1" style="color:var(--text-muted)">Client pays ~$9,000 (90% MSG)</div></div>
+    </div>
+
+    <!-- ===== DEMO CTA ===== -->
+    <div class="mb-4 p-5 rounded-xl" style="background:linear-gradient(135deg, rgba(229,147,62,0.06) 0%, rgba(34,197,94,0.04) 100%); border:1px solid rgba(229,147,62,0.15)">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <div class="text-sm font-semibold mb-1" style="color:var(--text-primary)">See How AI Processes Your Documents</div>
+          <div class="text-xs" style="color:var(--text-muted)">Watch ${ind.heroApp} analyze a real document in under 60 seconds</div>
+        </div>
+        <a href="hero-app-prototypes.html?app=${ind.heroAppId}" target="_blank" rel="noopener"
+           style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:linear-gradient(135deg,#e5933e,#d97706);color:white;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap;box-shadow:0 2px 12px rgba(229,147,62,0.3);transition:all 0.2s"
+           onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 20px rgba(229,147,62,0.4)'"
+           onmouseout="this.style.transform='';this.style.boxShadow='0 2px 12px rgba(229,147,62,0.3)'">
+          <span style="font-size:16px">&#9654;</span> Run the Demo — ${ind.heroApp}
+        </a>
+      </div>
+    </div>
+
+    <!-- ===== TRY WITH YOUR DOCUMENT CTA ===== -->
+    <div class="mb-4 p-4 rounded-xl" style="background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.15)">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+        <div>
+          <div class="text-sm font-semibold mb-1" style="color:var(--text-primary)">Try It With YOUR Document</div>
+          <div class="text-xs" style="color:var(--text-muted)">Upload your own file — see AI process it live on Capabara</div>
+        </div>
+        <a href="https://app.capabara.ai" target="_blank" rel="noopener"
+           style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:linear-gradient(135deg,#16a34a,#15803d);color:white;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap;box-shadow:0 2px 12px rgba(34,197,94,0.3);transition:all 0.2s"
+           onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 20px rgba(34,197,94,0.4)'"
+           onmouseout="this.style.transform='';this.style.boxShadow='0 2px 12px rgba(34,197,94,0.3)'">
+          Open in Capabara <span style="font-size:14px">&#8594;</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- ===== PILOT BUNDLE (moved up, after CTAs) ===== -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+      ${ind.pilotBundle.map((p,i) => `
+        <div class="card-elevated p-4 rounded-xl" style="${i===0?'border-color:var(--accent)':''}">
+          <div class="flex justify-between items-start mb-2"><div class="text-sm font-semibold">${p.name}</div><div class="text-xs px-2 py-0.5 rounded" style="background:rgba(229,147,62,0.1);color:#e5933e">Pilot ${i+1}</div></div>
+          <div class="text-xs mb-3" style="color:var(--text-muted)">${p.desc}</div>
+          <div class="flex justify-between text-xs"><span style="color:var(--text-muted)">MSG Value</span><span style="color:var(--jade)" class="font-semibold">$${p.price.toLocaleString()}</span></div>
+          <div class="flex justify-between text-xs mt-1"><span style="color:var(--text-muted)">Client pays</span><span class="font-semibold">$${(p.price*0.1).toLocaleString()}</span></div>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- ===== SALES INTEL — FULL ACCORDION (hidden by default) ===== -->
+    <div class="mb-6" style="border:1px solid rgba(229,147,62,0.15);border-radius:16px;overflow:hidden">
+      <div class="px-5 py-3 flex items-center justify-between cursor-pointer" onclick="S.intelOpen=!S.intelOpen;renderMain()" style="background:rgba(229,147,62,0.06)">
+        <div class="flex items-center gap-3">
+          <div class="${cls} px-3 py-1.5 rounded-lg font-bold text-sm tracking-wide">${tier}</div>
+          <div>
+            <div class="text-xs font-semibold uppercase tracking-widest" style="color:var(--accent)">Sales Intel</div>
+            <div class="text-xs" style="color:var(--text-muted)">${rec}</div>
+          </div>
+        </div>
+        <div class="text-xs px-3 py-1 rounded" style="color:var(--accent);border:1px solid rgba(229,147,62,0.2)">${S.intelOpen ? '▲ Hide' : '▼ Show'}</div>
+      </div>
+
+      ${S.intelOpen ? `
+      <div class="p-5">
+        <!-- Situational coaching -->
+        <div class="text-xs font-semibold uppercase tracking-wider mb-3" style="color:var(--text-muted)">Your next moves</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+          ${sitTips.slice(0,4).map(t => `
+            <div class="card-elevated p-3 rounded-xl flex gap-3 items-start">
+              <div class="text-lg flex-shrink-0 mt-0.5">${t.icon}</div>
+              <div><div class="text-sm font-semibold mb-0.5">${t.title}</div><div class="text-xs" style="color:var(--text-secondary);line-height:1.5">${t.tip}</div></div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Primary case study -->
+        <div class="text-xs font-semibold uppercase tracking-wider mb-3" style="color:var(--text-muted)">Reference story to tell this client</div>
+        ${primaryCase ? `
+          <div class="card-elevated p-4 rounded-xl mb-4" style="border-color:rgba(229,147,62,0.15)">
+            <div class="flex justify-between items-start mb-2">
+              <div><div class="text-xs font-medium mb-0.5" style="color:var(--accent)">${primaryCase.industry}</div><div class="font-semibold">${primaryCase.title}</div></div>
+              <div class="text-xs px-2 py-0.5 rounded-full" style="background:rgba(229,147,62,0.1);color:#e5933e">${primaryCase.pricing}</div>
+            </div>
+            <div class="text-sm mb-2" style="color:var(--text-secondary)">${primaryCase.problem}</div>
+            <div class="text-sm mb-2" style="color:var(--jade)">${primaryCase.result}</div>
+            <div class="p-4 rounded-lg mt-2" style="background:rgba(229,147,62,0.04);border:1px solid rgba(229,147,62,0.1)">
+              <div class="text-xs font-semibold mb-2" style="color:var(--accent)">Tell them this</div>
+              <div class="text-sm italic" style="color:var(--text-secondary);line-height:1.7">${primaryCase.talkTrack || '"We have heard of a case like yours in the ' + primaryCase.industry.toLowerCase() + ' industry — ' + primaryCase.result.toLowerCase() + ' Their setup took ' + primaryCase.buildTime + ' and the ROI was clear from day one: ' + primaryCase.roiCalc + '."'}</div>
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- More stories -->
+        <div class="text-xs font-semibold uppercase tracking-wider mb-3" style="color:var(--text-muted)">More stories you can use</div>
+        <div class="space-y-3 mb-5">
+          ${otherCases.map(cs => `
+            <div class="card-elevated p-4 rounded-xl cursor-pointer" onclick="this.querySelector('.detail').classList.toggle('hidden')">
+              <div class="flex justify-between items-center">
+                <div><div class="text-xs" style="color:var(--accent)">${cs.industry}</div><div class="text-sm font-semibold">${cs.title}</div></div>
+                <div class="text-xs" style="color:var(--text-muted)">${cs.pricing} · ${cs.closeTime}</div>
+              </div>
+              <div class="detail hidden mt-3 pt-3" style="border-top:1px solid var(--border-subtle)">
+                <div class="text-sm mb-1" style="color:var(--text-secondary)">${cs.problem}</div>
+                <div class="text-sm mb-2" style="color:var(--jade)">${cs.result}</div>
+                <div class="text-xs italic" style="color:var(--text-muted)">${cs.keyInsight}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Objection handlers -->
+        <div class="text-xs font-semibold uppercase tracking-wider mb-3" style="color:var(--text-muted)">If they push back</div>
+        <div class="space-y-2">
+          ${(()=>{
+            const mw = (S.hoursPerMonth*S.hourlyRate).toLocaleString();
+            const payback = Math.max(1,Math.ceil(3000/(S.hoursPerMonth*S.hourlyRate*0.7)));
+            const saved = Math.round(S.hoursPerMonth*0.7);
+            return (tier==='HOT' ? [
+            ['"Let me think about it."', '"I understand. But with the MSG grant covering 90%, the risk is minimal. What specifically are you weighing? I might be able to address it right now."'],
+            ['"We\'re too busy right now."', `"That's exactly why — you're spending ${S.hoursPerMonth} hours/month on this. The sooner we automate it, the sooner your team gets that time back."`]
+          ] : tier==='WARM' ? [
+            ['"Too expensive."', `"Your out-of-pocket is $3,000. You told me you're spending $${mw}/month on this manually. The pilot pays for itself in ${payback} months."`],
+            ['"Need to check with my boss."', '"Totally understand. What if I prepared a one-page ROI summary for them? I can also join a 10-minute call to answer their questions directly."']
+          ] : [
+            ['"Not a priority right now."', '"Completely fair. Can I check back in Q3? The MSG grant has limited slots and I\'d hate for you to miss out when timing is right."'],
+            ['"We don\'t process enough documents."', `"Even at your current volume, the AI saves ${saved} hours/month. But more importantly — is there another department that processes more? I often find the real volume is somewhere unexpected."`]
+          ]).map(([o,r]) => `
+            <div class="card-elevated p-3 rounded-xl">
+              <div class="text-sm font-medium mb-1" style="color:#ef4444">${o}</div>
+              <div class="text-sm italic" style="color:var(--jade)">${r}</div>
+            </div>
+          `).join('');
+          })()}
+        </div>
+
+        <!-- Closing Script (inside accordion) -->
+        <div class="card-elevated p-5 rounded-xl mt-5" style="border-color:rgba(34,197,94,0.2);background:rgba(34,197,94,0.04)">
+          <div class="text-sm font-semibold mb-2" style="color:#16a34a">Closing Script</div>
+          <div class="text-sm italic" style="color:var(--text-secondary);line-height:1.7">
+            "Based on what you've told me, your team spends ${S.hoursPerMonth} hours/month on this — that's
+            <strong style="color:var(--text-primary)">$${(S.hoursPerMonth * S.hourlyRate).toLocaleString()}/month</strong> in labor costs.
+            Our AI processes these in seconds. The government covers 90% through MSG, so your investment is just
+            <strong style="color:var(--text-primary)">$3,000</strong> for a $30,000 transformation.
+            Can I show you how it works with YOUR actual documents?"
+          </div>
+        </div>
+      </div>
+      ` : ''}
+    </div>
+  </div>`;
+}
+
+// ---- DASHBOARD ----
+function pageDashboard() {
+  const ind = INDUSTRIES[S.industry];
+  if (!ind) return '<div class="fade-in text-center py-20"><h2 class="text-2xl mb-2">No data yet</h2><p style="color:var(--text-muted)">Qualify a client first.</p></div>';
+  const ts = Object.values(S.scores).reduce((a,b)=>a+b,0), ms = ind.questions.length*3, pct = Math.round((ts/ms)*100);
+  const aw = S.hoursPerMonth*S.hourlyRate*12, sv = aw*0.7;
+  // Show result card + sales intel at top if coming from quiz
+  const resultSection = S.showResults ? resultCard(ind, ts, ms) : '';
+  return `<div class="fade-in">
+    <h1 class="text-3xl mb-8 tracking-tight">Dashboard — ${ind.icon} ${ind.name}</h1>
+    <div class="mb-8">${roiCalculator(ind)}</div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      ${[
+        [pct+'%','Score',pct>=75?'var(--jade)':pct>=50?'var(--accent)':'#ef4444',
+          pct>=75 ? 'HOT prospect — high volume, high pain, ready to buy. Demo now and close same meeting.'
+          : pct>=50 ? 'WARM prospect — decent fit but needs nurturing. Send a Loom demo video, then book a live call within a week.'
+          : 'COLD prospect — low volume or low pain right now. Add to nurture list and re-qualify in 3 months.'],
+        ['$'+aw.toLocaleString(),'Annual Waste','#ef4444',
+          'How much this company burns per year on manual document processing. Calculated as: '+S.hoursPerMonth+' hrs/mo × $'+S.hourlyRate+'/hr × 12 months. Use this number on the call — it makes the pain tangible.'],
+        ['$'+sv.toLocaleString(),'Projected Savings','var(--jade)',
+          'What they save annually if AI handles 70% of the work. This is the value you\'re selling — not the software, the savings. Compare this to the $3,000 out-of-pocket cost.'],
+        [Math.round((sv-3000)/3000*100)+'%','Year 1 ROI','var(--accent)',
+          'Return on their $3,000 investment in year one. Formula: (annual savings − $3,000 pocket cost) ÷ $3,000. Anything above 200% is a no-brainer — tell them that.']
+      ].map(([v,l,c,tip])=>
+        `<div class="card p-5 text-center kpi-card" onmouseenter="document.querySelectorAll('.kpi-tip').forEach(t=>t.classList.add('hidden'));this.querySelector('.kpi-tip').classList.remove('hidden')" onmouseleave="this.querySelector('.kpi-tip').classList.add('hidden')" style="position:relative">
+          <div class="text-3xl font-bold" style="color:${c}">${v}</div>
+          <div class="text-xs mt-1 flex items-center justify-center gap-1" style="color:var(--text-muted)">${l} <span style="opacity:0.4;font-size:10px">ⓘ</span></div>
+          <div class="kpi-tip hidden" style="position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 8px);width:280px;z-index:50;background:var(--card-bg);border:1px solid var(--accent);border-radius:12px;padding:12px 14px;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:left;pointer-events:none">
+            <div style="position:absolute;bottom:-6px;left:50%;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:var(--card-bg);border-right:1px solid var(--accent);border-bottom:1px solid var(--accent)"></div>
+            <div class="text-xs leading-relaxed" style="color:var(--text-secondary)">${tip}</div>
+          </div>
+        </div>`
+      ).join('')}
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="card p-6">
+        <div class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--text-muted)">Score Breakdown</div>
+        ${ind.questions.map((q,i)=>{const sc=S.scores[i]||0;const fill=sc===0?'var(--signal-low)':sc===1?'var(--signal-med)':sc===2?'var(--signal-high)':'var(--signal-max)';
+          return `<div class="mb-3"><div class="flex justify-between text-xs mb-1.5"><span style="color:var(--text-secondary)">${q.labels[sc]||'Not scored'}</span><span style="color:${sc>=2?'var(--jade)':sc>=1?'var(--signal-med)':'var(--text-muted)'}" class="font-medium">${sc}/3</span></div><div class="thermal-bar"><div class="thermal-fill" style="width:${(sc/3)*100}%;background:${fill}"></div></div></div>`;
+        }).join('')}
+      </div>
+      <div class="card p-6">
+        <div class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--text-muted)">Pilot Economics</div>
+        ${[['Pilot Value','$30,000',''],['MSG Covers 90%','$27,000','var(--jade)'],['Client Pays','$3,000','var(--accent)'],['Max Pilots','3',''],['Max per Company','$90,000','var(--jade)'],['Recurring','$499 – $1,900/mo','']].map(([l,v,c])=>
+          `<div class="flex justify-between py-2.5 text-sm" style="border-bottom:1px solid var(--border-subtle)"><span style="color:var(--text-muted)">${l}</span><span class="font-semibold" ${c?`style="color:${c}"`:''} >${v}</span></div>`
+        ).join('')}
+      </div>
+    </div>
+    ${resultSection ? `<div class="mt-8">${resultSection}</div>` : ''}
+
+    <div class="card p-6 mt-6">
+      <div class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--text-muted)">Workflows That AI Can Help — ${ind.name}</div>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-2">${ind.workflows.map(w=>`<div class="card-elevated rounded-lg px-3 py-2 text-sm" style="color:var(--text-secondary)">${w}</div>`).join('')}</div>
+    </div>
+  </div>`;
+}
+
+// ---- PROPOSALS ----
+function pageProposals() {
+  const ik=S.proposalIndustry||S.industry||'manufacturing', ind=INDUSTRIES[ik];
+  return `<div class="fade-in">
+    <h1 class="text-3xl mb-6 tracking-tight">Sample Proposal</h1>
+    <div class="mb-6"><select onchange="S.proposalIndustry=this.value;renderMain()" class="rounded-lg px-4 py-2.5 text-sm">${Object.entries(INDUSTRIES).map(([k,v])=>`<option value="${k}" ${ik===k?'selected':''}>${v.icon} ${v.name}</option>`).join('')}</select></div>
+    <div class="card p-8">
+      <div class="pb-6 mb-6" style="border-bottom:1px solid var(--border-subtle)">
+        <div class="flex justify-between items-start">
+          <div><div class="text-xs font-semibold uppercase tracking-widest mb-2" style="color:var(--accent)">Proposal</div><h2 class="text-2xl" style="font-family:Arial,sans-serif;font-weight:700">AI Document Automation Pilot</h2><div class="text-sm mt-1" style="color:var(--text-muted)">${ind.name} — MSG Grant Program</div></div>
+          <div class="text-right"><div class="text-sm" style="color:var(--text-muted)">Prepared by</div><div class="font-semibold text-sm">Straits Interactive</div><div class="text-xs" style="color:var(--text-muted)">× Capabara.com</div></div>
+        </div>
+      </div>
+      <div class="mb-8"><div class="text-xs font-semibold uppercase tracking-widest mb-3" style="color:var(--accent)">Executive Summary</div>
+        <p class="text-sm leading-relaxed" style="color:var(--text-secondary)">A 3-phase AI automation pilot using Singapore's MSG grant (90% funded). Gain document processing capabilities for ${ind.name.toLowerCase()}, reducing manual time by 60-80%. Total: <strong style="color:var(--text-primary)">$90,000</strong> — your cost: <strong style="color:var(--text-primary)">$9,000</strong>.</p>
+      </div>
+      <div class="mb-8"><div class="text-xs font-semibold uppercase tracking-widest mb-3" style="color:var(--accent)">Pilot Phases</div>
+        ${ind.pilotBundle.map((p,i)=>`<div class="card-elevated p-5 rounded-xl mb-3" style="border-left:3px solid ${['var(--accent)','var(--signal-med)','var(--jade)'][i]}"><div class="flex justify-between"><div><div class="text-xs mb-1" style="color:var(--text-muted)">Phase ${i+1} — ${['Month 1-2','Month 3-4','Month 5-6'][i]}</div><div class="font-semibold">${p.name}</div><div class="text-sm mt-1" style="color:var(--text-muted)">${p.desc}</div></div><div class="text-right"><div class="text-lg font-bold">$${p.price.toLocaleString()}</div><div class="text-xs" style="color:var(--jade)">You pay $${(p.price*0.1).toLocaleString()}</div></div></div></div>`).join('')}
+      </div>
+      <div class="mb-8"><div class="text-xs font-semibold uppercase tracking-widest mb-3" style="color:var(--accent)">Investment</div>
+        <div class="card-elevated rounded-xl overflow-hidden"><table class="w-full text-sm">
+          ${[['Total pilot value','$90,000',''],['MSG grant (90%)','-$81,000','var(--jade)'],['Your investment','$9,000','var(--accent)'],['Post-pilot monthly','$499 – $1,900/mo',''],['Est. annual savings','$'+(S.hoursPerMonth*S.hourlyRate*12*0.7).toLocaleString(),'var(--jade)']].map(([l,v,c])=>
+            `<tr style="border-bottom:1px solid var(--border-subtle)"><td class="p-3" style="color:var(--text-muted)">${l}</td><td class="p-3 text-right font-semibold" ${c?`style="color:${c}"`:''} >${v}</td></tr>`).join('')}
+        </table></div>
+      </div>
+      <div class="mb-6"><div class="text-xs font-semibold uppercase tracking-widest mb-3" style="color:var(--accent)">Timeline</div>
+        ${[{w:'Week 1',t:'Discovery & Setup'},{w:'Week 2-3',t:'Pilot 1 Build'},{w:'Week 4',t:'Go-Live'},{w:'Month 2-3',t:'Pilot 2'},{w:'Month 4-6',t:'Pilot 3 & Scale'},{w:'Month 7+',t:'Operations'}].map((s,i)=>`<div class="flex gap-3 mb-3"><div class="flex flex-col items-center"><div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold" style="background:${i<4?'var(--accent)':'var(--signal-low)'};color:white">${i+1}</div>${i<5?'<div style="width:1px;flex:1;background:var(--border-subtle);margin-top:4px"></div>':''}</div><div class="pb-3"><div class="text-xs" style="color:var(--accent)">${s.w}</div><div class="text-sm font-medium">${s.t}</div></div></div>`).join('')}
+      </div>
+      <div class="text-center text-xs pt-6" style="border-top:1px solid var(--border-subtle);color:var(--text-muted)">Straits Interactive Pte Ltd · capabara.com · MSG via ITE</div>
+    </div>
+  </div>`;
+}
+
+// ---- CASE STUDIES ----
+function pageCaseStudies() {
+  return `<div class="fade-in">
+    <h1 class="text-3xl mb-2 tracking-tight">Case Studies</h1>
+    <p class="mb-8" style="color:var(--text-muted);font-size:0.9rem">From Duy Bui's AI First Client Formula community</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      ${CASE_STUDIES.map((cs,i) => `
+        <div class="card case-card p-5" onclick="toggleCase(${i})">
+          <div class="flex justify-between items-start mb-2">
+            <div><div class="text-xs font-medium mb-1" style="color:var(--accent)">${cs.industry}</div><div class="font-semibold">${cs.title}</div></div>
+            <div class="text-xs" style="color:var(--text-muted)">${cs.source}</div>
+          </div>
+          ${S.expandedCase===i ? `
+            <div class="mt-4 space-y-3 text-sm fade-in">
+              ${[['Client',cs.client,''],['Problem',cs.problem,''],['Solution',cs.solution,''],['Result',cs.result,'var(--jade)']].map(([l,v,c])=>
+                `<div><div class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:var(--text-muted)">${l}</div><div style="${c?`color:${c}`:''}">${v}</div></div>`
+              ).join('')}
+              <div class="grid grid-cols-3 gap-2">${[[cs.pricing,'Pricing'],[cs.closeTime,'Close Time'],[cs.buildTime,'Build Time']].map(([v,l])=>`<div class="card-elevated rounded-lg p-2"><div class="text-xs" style="color:var(--text-muted)">${l}</div><div class="text-xs font-semibold">${v}</div></div>`).join('')}</div>
+              <div class="card-elevated rounded-lg p-3" style="border-color:rgba(229,147,62,0.15)"><div class="text-xs font-semibold mb-1" style="color:var(--accent)">Key Insight</div><div class="text-xs italic" style="color:var(--text-secondary)">${cs.keyInsight}</div></div>
+            </div>
+          ` : `<div class="text-xs mt-2" style="color:var(--text-muted)">${cs.problem.substring(0,90)}…</div><div class="text-xs mt-2" style="color:var(--accent)">Expand →</div>`}
+        </div>
+      `).join('')}
+    </div>
+    <div class="card p-6 mt-6">
+      <div class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--text-muted)">Pricing Reference (Duy Bui)</div>
+      <div class="grid grid-cols-3 gap-4">
+        ${[['Starter','$500','$100/mo','Simple automations',false],['Standard','$3,000','$250/mo','Multi-step workflows',true],['Premium','$2,500','$500/mo','Complex systems',false]].map(([t,s,m,d,hl])=>`
+          <div class="card-elevated rounded-xl p-4 text-center" ${hl?'style="border-color:var(--accent)"':''}>
+            <div class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:${hl?'var(--accent)':'var(--text-muted)'}">${t}</div>
+            <div class="text-2xl font-bold">${s}</div><div class="text-xs" style="color:var(--text-muted)">setup</div>
+            <div class="text-sm font-semibold mt-2" style="color:var(--accent)">${m}</div>
+            <div class="text-xs mt-2" style="color:var(--text-muted)">${d}</div>
+          </div>`).join('')}
+      </div>
+      <div class="text-xs text-center mt-4" style="color:var(--text-muted)">Our MSG pilots: $30K each (govt covers $27K). Post-pilot: $499–$1,900/mo.</div>
+    </div>
+  </div>`;
+}
+
+// ---- PLAYBOOK / TIPS ----
+function pageTips() {
+  return `<div class="fade-in">
+    <h1 class="text-3xl mb-2 tracking-tight">Sales Playbook</h1>
+    <p class="mb-8" style="color:var(--text-muted);font-size:0.9rem">Techniques from Duy Bui's AI First Client Formula</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      ${SALES_TIPS.map(t=>`<div class="card p-5"><div class="font-semibold mb-2" style="color:var(--accent);font-size:0.9rem">${t.title}</div><div class="text-sm leading-relaxed" style="color:var(--text-secondary)">${t.tip}</div></div>`).join('')}
+    </div>
+    <div class="card p-6 mb-6">
+      <div class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--text-muted)">Objection Handling</div>
+      <div class="space-y-3">
+        ${[
+          ['"Too expensive."','"Your out-of-pocket is $3,000 — the government covers 90%."'],
+          ['"Not ready yet."','"I can hold a pilot slot. What month works better?"'],
+          ['"Prove it first."','"Let me process your worst document right now. 30 seconds."'],
+          ['"Need boss approval."','"Happy to join that call. What questions will they have?"'],
+          ['"We have a system."','"Does it handle [their pain]? This complements what you have."'],
+          ['"AI isn\'t accurate."','"Great question — we have a systematic 5-phase approach to building and deploying our AI apps, designed exactly to ensure better data quality, output accuracy, and governance. There\'s also a lifecycle optimiser that continuously tests and reports on app performance. We can show you an example of the AI App Lifecycle Optimiser report."']
+        ].map(([o,r])=>`<div class="card-elevated rounded-xl p-4"><div class="text-sm font-medium mb-1" style="color:#ef4444">${o}</div><div class="text-sm italic" style="color:var(--jade)">${r}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="card p-6">
+      <div class="text-xs font-semibold uppercase tracking-widest mb-4" style="color:var(--text-muted)">15-Minute Call Script</div>
+      <div class="space-y-4">
+        ${[['0 – 2 min','Rapport','"I help [industry] companies automate document processing — saving 60-80% of manual effort."'],['2 – 8 min','Discovery','Run through the 6 questions. Score mentally. Note the specific numbers.'],['8 – 10 min','Calculator','"You\'re spending [X hrs] at [$Y/hr] — that\'s $[Z]/month in waste."'],['10 – 13 min','Live Demo','"Send me your worst document now." Process live. "30 seconds vs X hours."'],['13 – 15 min','Close','"Government covers 90%. $3,000 out of pocket. X slots left. Shall we start?"']
+        ].map(([t,p,s])=>`<div class="flex gap-4"><div class="w-20 flex-shrink-0"><div class="text-xs font-semibold" style="color:var(--accent)">${t}</div><div class="text-xs" style="color:var(--text-muted)">${p}</div></div><div class="text-sm" style="color:var(--text-secondary)">${s}</div></div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ==================== ACTIONS ====================
+function pickIndustry(k) { S.industry=k; S.scores={}; S.step=0; S.showResults=false; S.hoursPerMonth=40; S.hourlyRate=35; S.intelOpen=false; renderMain(); }
+function score(idx,val) { S.scores[idx]=val; renderMain(); }
+function wizNext(ts) { if(S.step<ts-1){S.step++;S.showResults=false;renderMain();} }
+function wizPrev() { if(S.step>0){S.step--;S.showResults=false;renderMain();} }
+function showResult() { inferFromScores(); S.showResults=true; S.tab='dashboard'; renderTabs(); renderMain(); window.scrollTo({top:0,behavior:'smooth'}); }
+function inferFromScores() {
+  const hoursScore = S.scores[2];
+  const hourMaps = {
+    manufacturing:{ 0:8,1:20,2:50,3:80 }, professional_services:{ 0:5,1:15,2:40,3:70 },
+    healthcare:{ 0:10,1:25,2:60,3:100 }, hr_recruitment:{ 0:5,1:12,2:30,3:60 },
+    real_estate:{ 0:4,1:10,2:25,3:50 }, general_sme:{ 0:6,1:15,2:35,3:65 },
+    logistics:{ 0:8,1:18,2:45,3:75 }, education:{ 0:6,1:15,2:35,3:65 }
+  };
+  const rateMaps = {
+    manufacturing:{ 0:18,1:25,2:40,3:55 }, professional_services:{ 0:25,1:50,2:100,3:200 },
+    healthcare:{ 0:22,1:35,2:55,3:80 }, hr_recruitment:{ 0:20,1:30,2:45,3:65 },
+    real_estate:{ 0:20,1:35,2:55,3:85 }, general_sme:{ 0:18,1:28,2:42,3:60 },
+    logistics:{ 0:18,1:28,2:42,3:58 }, education:{ 0:18,1:28,2:42,3:58 }
+  };
+  const hMap = hourMaps[S.industry] || hourMaps.general_sme;
+  const rMap = rateMaps[S.industry] || rateMaps.general_sme;
+  if (hoursScore !== undefined) S.hoursPerMonth = hMap[hoursScore];
+  if (hoursScore !== undefined) S.hourlyRate = rMap[hoursScore];
+}
+function toggleCase(i) { S.expandedCase=S.expandedCase===i?null:i; renderMain(); }
+function calcUpdate() {
+  S.hoursPerMonth=parseInt(document.getElementById('inp-hours')?.value)||0;
+  S.hourlyRate=parseInt(document.getElementById('inp-rate')?.value)||0;
+  const m=S.hoursPerMonth*S.hourlyRate;
+  const e=id=>document.getElementById(id);
+  if(e('calc-monthly'))e('calc-monthly').textContent='$'+m.toLocaleString();
+  if(e('calc-annual'))e('calc-annual').textContent='$'+(m*12).toLocaleString();
+  if(e('calc-roi'))e('calc-roi').textContent=Math.round(((m*12*0.7)-3000)/3000*100)+'%';
+}
+
+// ==================== INIT ====================
+renderTabs(); renderMain();
+</script>
+</body>
+</html>
